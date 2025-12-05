@@ -32,18 +32,6 @@ class TestReasoningEngine:
         assert any("inlined" in step.lower() for step in steps)
         assert any("semantic matching" in step.lower() for step in steps)
     
-    def test_ghidra_query_detection(self):
-        """Test Ghidra query detection."""
-        engine = ReasoningEngine()
-        
-        # Create mock Ghidra tool
-        mock_tool = Mock(spec=BaseTool)
-        mock_tool.name = "ghidra_analyze"
-        
-        steps = engine.analyze("analyze function in binary", [mock_tool])
-        
-        assert any("Ghidra query" in step for step in steps)
-    
     def test_security_constraints(self):
         """Test security constraint detection."""
         engine = ReasoningEngine()
@@ -75,10 +63,7 @@ class TestReasoningEngine:
         """Test when multiple rules are triggered."""
         engine = ReasoningEngine()
         
-        mock_tool = Mock(spec=BaseTool)
-        mock_tool.name = "ghidra_decrypt"
-        
-        steps = engine.analyze("find password function in binary ELF file", [mock_tool])
+        steps = engine.analyze("find password in binary ELF file", [])
         
         # Should trigger multiple rules
         assert len(steps) >= 2

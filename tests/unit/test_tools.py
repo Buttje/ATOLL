@@ -118,7 +118,7 @@ class TestMCPToolIntegration:
         tool_def = {
             "name": "analyze_binary",
             "description": "Analyzes a binary file",
-            "server": "ghidra_server",
+            "server": "example_server",
             "parameters": {
                 "file_path": {"type": "string"},
                 "options": {"type": "object"}
@@ -136,4 +136,4 @@ class TestMCPToolIntegration:
         
         assert tool.name == "analyze_binary"
         assert tool.description == "Analyzes a binary file"
-        assert tool.server_name == "ghidra_server"
+        assert tool.server_name == "example_server"

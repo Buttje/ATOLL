@@ -7,7 +7,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Coverage](https://img.shields.io/badge/coverage-90%25-green.svg)](https://github.com/Buttje/ATOLL)
 
-**A powerful LangChain-based AI agent that seamlessly integrates Ollama LLMs with MCP (Model Context Protocol) servers, enabling intelligent tool orchestration and advanced capabilities including Ghidra binary analysis.**
+**A powerful LangChain-based AI agent that seamlessly integrates Ollama LLMs with MCP (Model Context Protocol) servers, enabling intelligent tool orchestration and extensible capabilities through MCP server integration.**
 
 [Features](#features) • [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing)
 
@@ -49,11 +49,9 @@ ATOLL (Agentic Tools Orchestration on OLLama) is an intelligent AI agent framewo
 - Tool orchestration through MCP servers
 - Support for multiple transport protocols (stdio, HTTP, SSE)
 - Interactive terminal interface with dual modes
-- Binary analysis through Ghidra integration
 - Extensible architecture for custom tool integration
 
 **Use Cases:**
-- Binary analysis and reverse engineering
 - Automated system administration
 - Data analysis and transformation
 - Development workflow automation
@@ -66,7 +64,6 @@ ATOLL (Agentic Tools Orchestration on OLLama) is an intelligent AI agent framewo
 - 🤖 **LangChain Agent Integration**: Intelligent decision-making and reasoning powered by Ollama LLM
 - 🔧 **MCP Server Support**: Connect to multiple MCP servers with different transport protocols (stdio, HTTP, SSE)
 - 🎨 **Interactive Terminal UI**: Color-coded interface with command and prompt modes for enhanced user experience
-- 🔍 **Ghidra Integration**: Advanced binary analysis and reverse engineering capabilities
 - ⚡ **Fast Local Operations**: Optimized for quick response times (<2s) with local LLM execution
 - 📊 **Comprehensive Logging**: Detailed reasoning steps, error tracking, and debugging information
 - 🔒 **Type-Safe Configuration**: Pydantic-based validation for configuration files
@@ -88,7 +85,6 @@ Before installing ATOLL, ensure you have the following:
 ### Optional
 - **Git** - For cloning the repository
 - **Virtual Environment** - Recommended for isolation (venv, conda, etc.)
-- **Ghidra** - If using binary analysis features [Download Ghidra](https://ghidra-sre.org/)
 
 ### System Requirements
 - **OS**: Linux, macOS, or Windows (with WSL recommended)
@@ -175,12 +171,6 @@ Create this file to configure MCP servers:
 ```json
 {
   "servers": {
-    "ghidra": {
-      "transport": "stdio",
-      "command": "python",
-      "args": ["path/to/ghidra_mcp_server.py"],
-      "timeoutSeconds": 30
-    },
     "example_http": {
       "transport": "streamable_http",
       "url": "http://localhost:8080",
@@ -612,7 +602,6 @@ Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed information on:
 - ✅ Core LangChain agent integration
 - ✅ MCP server support (stdio, HTTP, SSE)
 - ✅ Interactive terminal UI
-- ✅ Ghidra integration
 - ✅ Comprehensive test suite
 
 ### Upcoming Features
@@ -709,7 +698,6 @@ A: Yes! Configure the `base_url` in `.ollamaConfig.json` to point to a remote se
 - [Ollama Documentation](https://ollama.ai/docs)
 - [LangChain Documentation](https://python.langchain.com/)
 - [MCP Specification](https://github.com/modelcontextprotocol/specification)
-- [Ghidra Documentation](https://ghidra-sre.org/)
 
 ---
 
@@ -746,7 +734,6 @@ ATOLL stands on the shoulders of giants. We're grateful to:
 
 ### Protocols & Standards
 - **[MCP Protocol](https://github.com/modelcontextprotocol/specification)** - For the tool integration specification
-- **[Ghidra](https://ghidra-sre.org/)** - For binary analysis capabilities
 
 ### Development Tools
 - **[pytest](https://pytest.org/)** - Testing framework

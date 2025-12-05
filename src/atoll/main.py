@@ -176,8 +176,8 @@ Prompt Mode:
 
 Examples:
 ---------
-  > help server ghidra
-  > help tool analyze_function
+  > help server example-server
+  > help tool example-tool
   > changemodel llama2
   > models
   > clear

@@ -63,24 +63,6 @@ Example configuration for MCP servers with different transports:
 }
 ```
 
-**Ghidra Integration**:
-```json
-{
-  "servers": {
-    "ghidra": {
-      "transport": "stdio",
-      "command": "python",
-      "args": ["${HOME}/ghidra_scripts/ghidra_mcp_server.py"],
-      "env": {
-        "GHIDRA_HOME": "${HOME}/ghidra_10.4_PUBLIC",
-        "PYTHONPATH": "${HOME}/ghidra_scripts"
-      },
-      "timeoutSeconds": 30
-    }
-  }
-}
-```
-
 ## Usage
 
 1. Copy the example files to your project root:

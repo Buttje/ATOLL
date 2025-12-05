@@ -9,7 +9,6 @@ class ReasoningEngine:
     def __init__(self):
         """Initialize reasoning engine."""
         self.rules = [
-            self._check_ghidra_query,
             self._check_security_constraints,
             self._check_performance_requirements,
         ]
@@ -32,24 +31,7 @@ class ReasoningEngine:
             if result:
                 reasoning_steps.append(result)
         
-        # Determine tool selection strategy
-        if tools:
-            tool_names = [t.name for t in tools]
-            if "ghidra" in prompt.lower() and any("ghidra" in name.lower() for name in tool_names):
-                reasoning_steps.append("Selecting Ghidra-specific tools for binary analysis")
-        
         return reasoning_steps
-    
-    def _check_ghidra_query(self, prompt: str, tools: List[Any]) -> str:
-        """Check if this is a Ghidra-specific query."""
-        ghidra_keywords = ["function", "implementation", "inlined", "address", "binary"]
-        
-        if any(keyword in prompt.lower() for keyword in ghidra_keywords):
-            ghidra_tools = [t for t in tools if "ghidra" in t.name.lower()]
-            if ghidra_tools:
-                return f"Identified Ghidra query - {len(ghidra_tools)} relevant tools available"
-        
-        return ""
     
     def _check_security_constraints(self, prompt: str, tools: List[Any]) -> str:
         """Check for security-sensitive operations."""

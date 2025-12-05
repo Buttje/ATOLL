@@ -375,11 +375,6 @@ if __name__ == "__main__":
     # Implementation details...
 ```
 
-## Ghidra Integration Example
-
-See the Ghidra MCP server implementation for binary analysis capabilities.
-```
-
 Perfect! The professional Python project structure is now complete. You have:
 
 ## ✅ **Complete Project Structure**

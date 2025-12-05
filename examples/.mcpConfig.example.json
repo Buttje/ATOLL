@@ -13,18 +13,6 @@
       "transport": "streamable_http",
       "url": "http://localhost:8080",
       "timeoutSeconds": 30
-    },
-    "ghidra-example": {
-      "transport": "stdio",
-      "command": "python",
-      "args": [
-        "${HOME}/ghidra_scripts/ghidra_mcp_server.py"
-      ],
-      "env": {
-        "GHIDRA_HOME": "${HOME}/ghidra_10.4_PUBLIC",
-        "PYTHONPATH": "${HOME}/ghidra_scripts"
-      },
-      "timeoutSeconds": 30
     }
   }
 }

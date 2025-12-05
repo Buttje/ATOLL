@@ -141,5 +141,5 @@ except json.JSONDecodeError:
 ## Performance Requirements
 
 - Local LLM responses: <2s target (depends on model/hardware)
-- Binary analysis (ELF <50MB): <10s
 - MCP server timeout: 30s default (configurable in `.mcpConfig.json`)
+- Tool execution varies by MCP server implementation

@@ -35,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hot model switching without restart
 - Comprehensive test suite with 90%+ coverage
 - Configuration management with type-safe Pydantic models
-- Ghidra binary analysis integration support
 - Interactive help system for servers and tools
 - Conversation memory management
 
