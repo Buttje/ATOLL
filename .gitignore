@@ -135,13 +135,15 @@ cython_debug/
 *.swp
 *.swo
 *~
+.cursor/
+.windsurf/
 
 # OS files
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Configuration files (local only)
+# ATOLL-specific configuration files (local only)
 .ollamaConfig.json
 .mcpConfig.json
 
@@ -153,5 +155,12 @@ logs/
 tmp/
 temp/
 
-#Continue
+# AI coding assistants
 .continue/
+.aider*
+.gpteng*
+
+# Backup files
+*.bak
+*.backup
+*~
