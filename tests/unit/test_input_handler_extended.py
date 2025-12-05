@@ -3,7 +3,7 @@
 import pytest
 import platform
 from unittest.mock import patch, MagicMock, call
-from ollama_mcp_agent.ui.input_handler import InputHandler
+from atoll.ui.input_handler import InputHandler
 
 
 class TestInputHandlerExtended:

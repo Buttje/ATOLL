@@ -3,7 +3,7 @@
 import pytest
 import logging
 from unittest.mock import patch, Mock
-from ollama_mcp_agent.utils.logger import get_logger, setup_logging
+from atoll.utils.logger import get_logger, setup_logging
 
 
 class TestLoggerComprehensive:

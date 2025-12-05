@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from ollama_mcp_agent.mcp.server_manager import MCPServerManager
-from ollama_mcp_agent.config.models import MCPConfig, MCPServerConfig
+from atoll.mcp.server_manager import MCPServerManager
+from atoll.config.models import MCPConfig, MCPServerConfig
 
 
 class TestMCPServerManager:
@@ -32,7 +32,7 @@ class TestMCPServerManager:
         
         manager = MCPServerManager(config)
         
-        with patch('ollama_mcp_agent.mcp.server_manager.MCPClient') as mock_client_class:
+        with patch('atoll.mcp.server_manager.MCPClient') as mock_client_class:
             mock_client = Mock()
             mock_client.connect = AsyncMock(return_value=True)
             mock_client.list_tools = AsyncMock(return_value=[{"name": "tool1"}])

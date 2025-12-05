@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from ollama_mcp_agent.main import Application, main
-from ollama_mcp_agent.ui.terminal import UIMode
+from atoll.main import Application, main
+from atoll.ui.terminal import UIMode
 
 
 class TestGracefulShutdown:
@@ -79,7 +79,7 @@ class TestGracefulShutdown:
     
     def test_main_handles_keyboard_interrupt(self):
         """Test main function handles KeyboardInterrupt gracefully."""
-        with patch('ollama_mcp_agent.main.Application') as mock_app_class:
+        with patch('atoll.main.Application') as mock_app_class:
             mock_app = Mock()
             mock_app_class.return_value = mock_app
             
@@ -95,7 +95,7 @@ class TestGracefulShutdown:
     
     def test_main_handles_general_exception(self):
         """Test main function handles general exceptions."""
-        with patch('ollama_mcp_agent.main.Application') as mock_app_class:
+        with patch('atoll.main.Application') as mock_app_class:
             mock_app = Mock()
             mock_app_class.return_value = mock_app
             

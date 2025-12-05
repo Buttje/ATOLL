@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from ollama_mcp_agent.main import Application, main
+from atoll.main import Application, main
 
 
 class TestMainComprehensive:
@@ -19,7 +19,7 @@ class TestMainComprehensive:
     
     def test_main_function_exception(self):
         """Test main function with exception."""
-        with patch('ollama_mcp_agent.main.Application') as mock_app_class:
+        with patch('atoll.main.Application') as mock_app_class:
             mock_app = Mock()
             mock_app.run = AsyncMock(side_effect=Exception("Test error"))
             mock_app_class.return_value = mock_app

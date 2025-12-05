@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ollama_mcp_agent.ui.terminal import TerminalUI, UIMode
+from atoll.ui.terminal import TerminalUI, UIMode
 
 
 class TestTerminalUIExtended:

@@ -1,4 +1,4 @@
-"""Installation script for Ollama MCP Agent."""
+"""Installation script for ATOLL."""
 
 import subprocess
 import sys
@@ -28,7 +28,7 @@ def run_command(cmd, description, ignore_errors=False):
 def main():
     """Main installation process."""
     print("=" * 60)
-    print("Ollama MCP Agent Installation")
+    print("ATOLL Installation")
     print("=" * 60)
     
     # Check Python version
@@ -78,7 +78,7 @@ def main():
     else:
         print("  source venv/bin/activate")
     print("\nTo run the agent:")
-    print("  ollama-mcp-agent")
+    print("  atoll")
     print("=" * 60)
 
 

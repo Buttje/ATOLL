@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import Mock, patch
 from io import StringIO
 
-from ollama_mcp_agent.ui.terminal import TerminalUI, UIMode
-from ollama_mcp_agent.ui.colors import ColorScheme
+from atoll.ui.terminal import TerminalUI, UIMode
+from atoll.ui.colors import ColorScheme
 
 
 class TestTerminalUI:

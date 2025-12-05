@@ -1,4 +1,4 @@
-"""Main entry point for Ollama MCP Agent."""
+"""Main entry point for ATOLL."""
 
 import asyncio
 import sys
@@ -25,7 +25,7 @@ class Application:
     
     async def startup(self) -> None:
         """Perform startup sequence."""
-        print(self.colors.header("Starting Ollama MCP Agent..."))
+        print(self.colors.header("Starting ATOLL..."))
         
         # Load configurations
         self.config_manager.load_configs()

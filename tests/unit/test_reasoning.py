@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock
-from ollama_mcp_agent.agent.reasoning import ReasoningEngine
+from atoll.agent.reasoning import ReasoningEngine
 from langchain_core.tools import BaseTool
 
 

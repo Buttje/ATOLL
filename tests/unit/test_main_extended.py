@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from ollama_mcp_agent.main import Application
+from atoll.main import Application
 
 
 class TestApplicationExtended:
@@ -11,7 +11,7 @@ class TestApplicationExtended:
     @pytest.mark.asyncio
     async def test_startup_with_mcp_servers(self):
         """Test startup with MCP servers configured."""
-        with patch('ollama_mcp_agent.main.ConfigManager') as mock_config_manager:
+        with patch('atoll.main.ConfigManager') as mock_config_manager:
             app = Application()
             
             # Mock config manager
@@ -24,13 +24,13 @@ class TestApplicationExtended:
             mock_config_instance.mcp_config = Mock(servers={})
             
             # Mock MCP server manager
-            with patch('ollama_mcp_agent.main.MCPServerManager') as mock_manager_class:
+            with patch('atoll.main.MCPServerManager') as mock_manager_class:
                 mock_manager = mock_manager_class.return_value
                 mock_manager.connect_all = AsyncMock()
                 mock_manager.tool_registry = Mock(tools={})
                 
                 # Mock agent
-                with patch('ollama_mcp_agent.main.OllamaMCPAgent') as mock_agent_class:
+                with patch('atoll.main.OllamaMCPAgent') as mock_agent_class:
                     mock_agent = mock_agent_class.return_value
                     
                     await app.startup()

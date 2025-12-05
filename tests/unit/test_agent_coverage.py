@@ -2,10 +2,10 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from ollama_mcp_agent.agent.agent import OllamaMCPAgent
-from ollama_mcp_agent.config.models import OllamaConfig
-from ollama_mcp_agent.mcp.server_manager import MCPServerManager
-from ollama_mcp_agent.mcp.tool_registry import ToolRegistry
+from atoll.agent.agent import OllamaMCPAgent
+from atoll.config.models import OllamaConfig
+from atoll.mcp.server_manager import MCPServerManager
+from atoll.mcp.tool_registry import ToolRegistry
 
 
 class TestAgentCoverage:

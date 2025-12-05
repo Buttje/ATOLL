@@ -1,7 +1,7 @@
 """Unit tests for MCP tools module."""
 
 import pytest
-from ollama_mcp_agent.mcp.tools import MCPTool, MCPToolRegistry
+from atoll.mcp.tools import MCPTool, MCPToolRegistry
 
 
 class TestMCPTool:

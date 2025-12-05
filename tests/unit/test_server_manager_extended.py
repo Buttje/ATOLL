@@ -3,8 +3,8 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from ollama_mcp_agent.mcp.server_manager import MCPServerManager
-from ollama_mcp_agent.config.models import MCPConfig, MCPServerConfig
+from atoll.mcp.server_manager import MCPServerManager
+from atoll.config.models import MCPConfig, MCPServerConfig
 
 
 class TestMCPServerManagerExtended:

@@ -1,7 +1,7 @@
 """Unit tests for tool registry."""
 
 import pytest
-from ollama_mcp_agent.mcp.tool_registry import ToolRegistry
+from atoll.mcp.tool_registry import ToolRegistry
 
 
 class TestToolRegistry:

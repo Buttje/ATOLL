@@ -5,8 +5,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from ollama_mcp_agent.config.manager import ConfigManager
-from ollama_mcp_agent.config.models import OllamaConfig, MCPConfig, MCPServerConfig
+from atoll.config.manager import ConfigManager
+from atoll.config.models import OllamaConfig, MCPConfig, MCPServerConfig
 
 
 class TestConfigManager:
