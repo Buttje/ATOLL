@@ -132,10 +132,13 @@ venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-#### Option 3: Install from PyPI (Coming Soon)
+#### Option 3: Install from PyPI
+
+> **Note**: PyPI package is not yet available. This option will be enabled in a future release.
 
 ```bash
-pip install atoll
+# Coming soon
+# pip install atoll
 ```
 
 ### Configuration
@@ -614,14 +617,14 @@ Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed information on:
 
 ### Upcoming Features
 
-#### v1.1.0 (Q1 2025)
+#### v1.1.0 (Q1 2026)
 - [ ] Web-based UI interface
 - [ ] Plugin system for custom tools
 - [ ] Enhanced error recovery
 - [ ] Performance optimizations
 - [ ] Additional LLM provider support
 
-#### v1.2.0 (Q2 2025)
+#### v1.2.0 (Q2 2026)
 - [ ] Multi-agent coordination
 - [ ] Persistent conversation storage
 - [ ] API server mode
