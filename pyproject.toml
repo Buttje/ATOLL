@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ollama-mcp-agent"
+name = "atoll"
 version = "1.0.0"
 description = "LangChain-based agent integrating Ollama with MCP servers"
 readme = "README.md"
@@ -59,19 +59,19 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/ollama-mcp-agent"
-Documentation = "https://github.com/yourusername/ollama-mcp-agent/docs"
-Repository = "https://github.com/yourusername/ollama-mcp-agent"
-Issues = "https://github.com/yourusername/ollama-mcp-agent/issues"
+Homepage = "https://github.com/yourusername/atoll"
+Documentation = "https://github.com/yourusername/atoll/docs"
+Repository = "https://github.com/yourusername/atoll"
+Issues = "https://github.com/yourusername/atoll/issues"
 
 [project.scripts]
-ollama-mcp-agent = "ollama_mcp_agent.main:main"
+atoll = "atoll.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-ollama_mcp_agent = ["py.typed"]
+atoll = ["py.typed"]
     [tool.black]
     line-length = 100
     target-version = ["py39"]

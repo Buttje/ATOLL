@@ -4,9 +4,9 @@ import pytest
 import asyncio
 import json
 from unittest.mock import patch, Mock
-from ollama_mcp_agent.utils.async_helpers import timeout_wrapper, retry_async
-from ollama_mcp_agent.utils.validators import validate_config, validate_tool_response
-from ollama_mcp_agent.utils.logger import get_logger, setup_logging
+from atoll.utils.async_helpers import timeout_wrapper, retry_async
+from atoll.utils.validators import validate_config, validate_tool_response
+from atoll.utils.logger import get_logger, setup_logging
 
 
 class TestAsyncHelpers:

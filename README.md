@@ -3,7 +3,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-green.svg)](https://github.com/yourusername/ollama-mcp-agent)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-green.svg)](https://github.com/yourusername/atoll)
 
 A LangChain-based agent integrating Ollama LLM with MCP (Model Context Protocol) servers for advanced tool usage, including specialized support for Ghidra integration.
 
@@ -61,10 +61,10 @@ pip install -e ".[dev]"
 
 ```bash
 # Start the agent
-ollama-mcp-agent
+atoll
 
 # Or run directly
-python -m ollama_mcp_agent
+python -m atoll
 ```
 
 ## Terminal Interface
@@ -140,28 +140,28 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### 3. Source Code Structure
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/__init__.py
-"""Ollama MCP Agent - LangChain-based agent integrating Ollama with MCP servers."""
+```python:atoll/src/atoll/__init__.py
+"""ATOLL - Agentic Tools Orchestration on OLLama."""
 
 __version__ = "1.0.0"
 __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
-from ollama_mcp_agent.agent import OllamaMCPAgent
-from ollama_mcp_agent.config import ConfigManager
+from atoll.agent import OllamaMCPAgent
+from atoll.config import ConfigManager
 
 __all__ = ["OllamaMCPAgent", "ConfigManager"]
 ```
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/py.typed
+```python:atoll/src/atoll/py.typed
 # Marker file for PEP 561
 # This package supports type hints
 ```
 
 ### 4. Configuration Module
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/config/__init__.py
-"""Configuration management for Ollama MCP Agent."""
+```python:atoll/src/atoll/config/__init__.py
+"""Configuration management for ATOLL."""
 
 from .manager import ConfigManager
 from .models import OllamaConfig, MCPConfig, MCPServerConfig
@@ -170,7 +170,7 @@ from .validator import ConfigValidator
 __all__ = ["ConfigManager", "OllamaConfig", "MCPConfig", "MCPServerConfig", "ConfigValidator"]
 ```
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/config/models.py
+```python:atoll/src/atoll/config/models.py
 """Configuration data models."""
 
 from enum import Enum
@@ -258,7 +258,7 @@ class MCPConfig(BaseModel):
         }
 ```
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/config/validator.py
+```python:atoll/src/atoll/config/validator.py
 """Configuration validation utilities."""
 
 import json
@@ -354,7 +354,7 @@ class ConfigValidator:
         return config
 ```
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/config/manager.py
+```python:atoll/src/atoll/config/manager.py
 """Configuration management implementation."""
 
 import sys
@@ -413,7 +413,7 @@ class ConfigManager:
 
 ### 5. MCP Client Module
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/mcp/__init__.py
+```python:atoll/src/atoll/mcp/__init__.py
 """MCP client implementation."""
 
 from .client import MCPClient
@@ -423,7 +423,7 @@ from .tools import MCPTool, MCPToolRegistry
 __all__ = ["MCPClient", "MCPServerManager", "MCPTool", "MCPToolRegistry"]
 ```
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/mcp/client.py
+```python:atoll/src/atoll/mcp/client.py
 """MCP client for server communication."""
 
 import asyncio
@@ -591,7 +591,7 @@ class MCPClient:
             self.session = None
 ```
 
-```python:ollama-mcp-agent/src/ollama_mcp_agent/mcp/server_manager.py
+```python:atoll/src/atoll/mcp/server_manager.py
 """MCP server connection manager."""
 
 import asyncio

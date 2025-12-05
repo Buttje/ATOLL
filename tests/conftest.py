@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Dict, Any
 from unittest.mock import Mock, AsyncMock
 
-from ollama_mcp_agent.config.models import OllamaConfig, MCPConfig, MCPServerConfig
-from ollama_mcp_agent.mcp.client import MCPClient
-from ollama_mcp_agent.ui.terminal import TerminalUI
+from atoll.config.models import OllamaConfig, MCPConfig, MCPServerConfig
+from atoll.mcp.client import MCPClient
+from atoll.ui.terminal import TerminalUI
 
 
 @pytest.fixture

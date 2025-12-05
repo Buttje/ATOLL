@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, call
-from ollama_mcp_agent.main import Application
-from ollama_mcp_agent.config.models import OllamaConfig, MCPConfig
+from atoll.main import Application
+from atoll.config.models import OllamaConfig, MCPConfig
 
 
 class TestHelpCommand:

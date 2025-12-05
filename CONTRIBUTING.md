@@ -1,4 +1,4 @@
-# Contributing to Ollama MCP Agent
+# Contributing to ATOLL
 
 We welcome contributions! This document provides guidelines for contributing to the project.
 
@@ -7,8 +7,8 @@ We welcome contributions! This document provides guidelines for contributing to 
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/yourusername/ollama-mcp-agent.git
-   cd ollama-mcp-agent
+   git clone https://github.com/yourusername/atoll.git
+   cd atoll
    ```
 
 3. Install in development mode:
@@ -109,12 +109,12 @@ Thank you for contributing! 🎉
 
 ```ini:setup.cfg
 [metadata]
-name = ollama-mcp-agent
-version = attr: ollama_mcp_agent.__version__
+name = atoll
+version = attr: atoll.__version__
 description = LangChain-based agent integrating Ollama with MCP servers
 long_description = file: README.md
 long_description_content_type = text/markdown
-author = Ollama MCP Contributors
+author = ATOLL Contributors
 license = MIT
 classifiers =
     Development Status :: 4 - Beta
@@ -147,7 +147,7 @@ where = src
 
 [options.entry_points]
 console_scripts =
-    ollama-mcp-agent = ollama_mcp_agent.main:main
+    atoll = atoll.main:main
 
 [options.extras_require]
 dev =
@@ -196,7 +196,7 @@ exclude_lines =
 ## Architecture Overview
 
 ```
-ollama-mcp-agent/
+atoll/
 ├── agent/          # LangChain agent implementation
 ├── mcp/            # MCP client and server management
 ├── config/         # Configuration management
@@ -235,7 +235,7 @@ Cross-platform terminal interface:
 Extend `MCPToolWrapper` for custom tool behavior:
 
 ```python
-from ollama_mcp_agent.agent.tools import MCPToolWrapper
+from atoll.agent.tools import MCPToolWrapper
 
 class CustomTool(MCPToolWrapper):
     async def arun(self, input_str: str) -> str:
@@ -270,7 +270,7 @@ def custom_rule(prompt: str, tools: List[Tool]) -> str:
 ### Logging Levels
 ```python
 import logging
-logging.getLogger("ollama_mcp_agent").setLevel(logging.DEBUG)
+logging.getLogger("atoll").setLevel(logging.DEBUG)
 ```
 
 ### Common Issues

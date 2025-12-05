@@ -4,8 +4,8 @@ import pytest
 import json
 from pathlib import Path
 from unittest.mock import patch, mock_open
-from ollama_mcp_agent.config.manager import ConfigManager
-from ollama_mcp_agent.config.models import OllamaConfig, MCPConfig
+from atoll.config.manager import ConfigManager
+from atoll.config.models import OllamaConfig, MCPConfig
 
 
 class TestConfigManagerComprehensive:

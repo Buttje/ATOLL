@@ -1,4 +1,4 @@
-"""Ollama MCP Agent - LangChain-based agent integrating Ollama with MCP servers."""
+"""ATOLL - Agentic Tools Orchestration on OLLama."""
 
 from .main import main, Application
 from .agent import OllamaMCPAgent

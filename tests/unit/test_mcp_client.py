@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
-from ollama_mcp_agent.config.models import MCPServerConfig
-from ollama_mcp_agent.mcp.client import MCPClient
+from atoll.config.models import MCPServerConfig
+from atoll.mcp.client import MCPClient
 
 
 class TestMCPClient:

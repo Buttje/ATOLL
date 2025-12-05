@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, Mock
-from ollama_mcp_agent.ui.input_handler import InputHandler
+from atoll.ui.input_handler import InputHandler
 
 
 class TestInputHandlerComprehensive:

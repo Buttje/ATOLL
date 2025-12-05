@@ -3,8 +3,8 @@
 import pytest
 import asyncio
 from unittest.mock import patch, Mock, AsyncMock, MagicMock
-from ollama_mcp_agent.main import Application, main
-from ollama_mcp_agent.config.models import OllamaConfig, MCPConfig
+from atoll.main import Application, main
+from atoll.config.models import OllamaConfig, MCPConfig
 
 
 class TestApplication:
@@ -13,10 +13,10 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_startup(self):
         """Test application startup."""
-        with patch('ollama_mcp_agent.main.ConfigManager') as mock_config_manager:
-            with patch('ollama_mcp_agent.main.TerminalUI') as mock_ui:
-                with patch('ollama_mcp_agent.main.MCPServerManager') as mock_server_manager:
-                    with patch('ollama_mcp_agent.main.OllamaMCPAgent') as mock_agent:
+        with patch('atoll.main.ConfigManager') as mock_config_manager:
+            with patch('atoll.main.TerminalUI') as mock_ui:
+                with patch('atoll.main.MCPServerManager') as mock_server_manager:
+                    with patch('atoll.main.OllamaMCPAgent') as mock_agent:
                         app = Application()
                         
                         # Set up mocks
@@ -35,7 +35,7 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_handle_prompt(self):
         """Test handling user prompt."""
-        with patch('ollama_mcp_agent.main.ConfigManager'):
+        with patch('atoll.main.ConfigManager'):
             app = Application()
             
             # Set up mock agent
@@ -49,7 +49,7 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_handle_command_models(self):
         """Test handling models command."""
-        with patch('ollama_mcp_agent.main.ConfigManager'):
+        with patch('atoll.main.ConfigManager'):
             app = Application()
             
             app.agent = Mock()
@@ -67,7 +67,7 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_handle_command_changemodel(self):
         """Test handling changemodel command."""
-        with patch('ollama_mcp_agent.main.ConfigManager'):
+        with patch('atoll.main.ConfigManager'):
             app = Application()
             
             app.agent = Mock()
@@ -81,7 +81,7 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_handle_command_quit(self):
         """Test handling quit command."""
-        with patch('ollama_mcp_agent.main.ConfigManager'):
+        with patch('atoll.main.ConfigManager'):
             app = Application()
             
             app.ui = Mock()
@@ -94,7 +94,7 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_handle_command_unknown(self):
         """Test handling unknown command."""
-        with patch('ollama_mcp_agent.main.ConfigManager'):
+        with patch('atoll.main.ConfigManager'):
             app = Application()
             
             app.ui = Mock()
@@ -107,10 +107,10 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_run_loop_keyboard_interrupt(self):
         """Test the main run loop with keyboard interrupt."""
-        with patch('ollama_mcp_agent.main.ConfigManager'):
-            with patch('ollama_mcp_agent.main.TerminalUI'):
-                with patch('ollama_mcp_agent.main.MCPServerManager'):
-                    with patch('ollama_mcp_agent.main.OllamaMCPAgent'):
+        with patch('atoll.main.ConfigManager'):
+            with patch('atoll.main.TerminalUI'):
+                with patch('atoll.main.MCPServerManager'):
+                    with patch('atoll.main.OllamaMCPAgent'):
                         app = Application()
                         
                         # Mock startup
@@ -125,8 +125,8 @@ class TestApplication:
 
 def test_main_function():
     """Test the main entry point."""
-    with patch('ollama_mcp_agent.main.asyncio.run') as mock_run:
-        with patch('ollama_mcp_agent.main.Application') as mock_app_class:
+    with patch('atoll.main.asyncio.run') as mock_run:
+        with patch('atoll.main.Application') as mock_app_class:
             mock_app = Mock()
             mock_app.run = AsyncMock()
             mock_app_class.return_value = mock_app

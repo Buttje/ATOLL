@@ -87,7 +87,7 @@ Create `.mcpConfig.json`:
 
 ### Starting the Agent
 ```bash
-ollama-mcp-agent
+atoll
 ```
 
 ### UI Modes

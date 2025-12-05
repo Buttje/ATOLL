@@ -4,8 +4,8 @@ import pytest
 import asyncio
 from unittest.mock import patch, Mock, AsyncMock
 
-from ollama_mcp_agent.main import Application
-from ollama_mcp_agent.config.models import OllamaConfig, MCPConfig
+from atoll.main import Application
+from atoll.config.models import OllamaConfig, MCPConfig
 
 
 class TestIntegration:
@@ -21,7 +21,7 @@ class TestIntegration:
         mcp_config_file = tmp_path / ".mcpConfig.json"
         mcp_config_file.write_text('{"servers": {}}')
         
-        with patch("ollama_mcp_agent.main.ConfigManager") as mock_config_manager:
+        with patch("atoll.main.ConfigManager") as mock_config_manager:
             app = Application()
             
             # Create proper config objects
@@ -44,7 +44,7 @@ class TestIntegration:
             mock_config_instance.load_configs.return_value = None
             
             # Mock the Ollama LLM to avoid actual connection
-            with patch('ollama_mcp_agent.agent.agent.OllamaLLM') as mock_ollama:
+            with patch('atoll.agent.agent.OllamaLLM') as mock_ollama:
                 mock_llm = Mock()
                 mock_ollama.return_value = mock_llm
                 
@@ -60,7 +60,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_full_workflow(self):
         """Test a complete workflow from startup to prompt processing."""
-        with patch("ollama_mcp_agent.main.ConfigManager") as mock_config_manager:
+        with patch("atoll.main.ConfigManager") as mock_config_manager:
             app = Application()
             
             # Create proper config objects
@@ -82,7 +82,7 @@ class TestIntegration:
             mock_config_instance.mcp_config = mock_mcp_config
             
             # Mock the necessary components
-            with patch('ollama_mcp_agent.agent.agent.OllamaLLM') as mock_ollama:
+            with patch('atoll.agent.agent.OllamaLLM') as mock_ollama:
                 mock_llm = Mock()
                 mock_llm.ainvoke = AsyncMock(return_value="Test response")
                 mock_ollama.return_value = mock_llm

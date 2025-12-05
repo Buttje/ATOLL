@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, Mock
-from ollama_mcp_agent.ui.colors import ColorScheme, Fore, Back, Style
+from atoll.ui.colors import ColorScheme, Fore, Back, Style
 
 
 class TestColorScheme:

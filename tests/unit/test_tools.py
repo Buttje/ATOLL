@@ -4,8 +4,8 @@ import json
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
-from ollama_mcp_agent.agent.tools import MCPToolWrapper
-from ollama_mcp_agent.mcp.server_manager import MCPServerManager
+from atoll.agent.tools import MCPToolWrapper
+from atoll.mcp.server_manager import MCPServerManager
 
 
 class TestMCPToolWrapper:

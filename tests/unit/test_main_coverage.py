@@ -2,9 +2,9 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from ollama_mcp_agent.main import Application
-from ollama_mcp_agent.ui.terminal import UIMode
-from ollama_mcp_agent.config.models import OllamaConfig
+from atoll.main import Application
+from atoll.ui.terminal import UIMode
+from atoll.config.models import OllamaConfig
 
 
 class TestApplicationCoverage:
@@ -82,12 +82,12 @@ class TestApplicationCoverage:
         app = Application()
         
         with patch.object(app.config_manager, 'load_configs'):
-            with patch('ollama_mcp_agent.main.MCPServerManager') as mock_manager_class:
+            with patch('atoll.main.MCPServerManager') as mock_manager_class:
                 mock_manager = Mock()
                 mock_manager.connect_all = AsyncMock()
                 mock_manager_class.return_value = mock_manager
                 
-                with patch('ollama_mcp_agent.main.OllamaMCPAgent') as mock_agent_class:
+                with patch('atoll.main.OllamaMCPAgent') as mock_agent_class:
                     with patch('builtins.print') as mock_print:
                         await app.startup()
                         

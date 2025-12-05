@@ -4,7 +4,7 @@ import pytest
 import sys
 import os
 from unittest.mock import patch, MagicMock
-from ollama_mcp_agent.ui.colors import ColorScheme, Fore, Back, Style
+from atoll.ui.colors import ColorScheme, Fore, Back, Style
 
 
 class TestColorSchemeExtended:
