@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ollama-mcp-agent"
+version = "1.0.0"
+description = "LangChain-based agent integrating Ollama with MCP servers"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Ollama MCP Contributors"}
+]
+keywords = ["ollama", "mcp", "langchain", "agent", "ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "langchain>=0.2.0",
+    "langchain-community>=0.2.0",
+    "langchain-core>=0.2.0",
+    "langchain-ollama>=0.1.0",
+    "ollama>=0.1.7",
+    "aiohttp>=3.9.0",
+    "colorama>=0.4.6",
+    "jsonschema>=4.20.0",
+    "pydantic>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+    "pre-commit>=3.5.0",
+    "types-aiofiles",
+    "types-colorama",
+]
+
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/ollama-mcp-agent"
+Documentation = "https://github.com/yourusername/ollama-mcp-agent/docs"
+Repository = "https://github.com/yourusername/ollama-mcp-agent"
+Issues = "https://github.com/yourusername/ollama-mcp-agent/issues"
+
+[project.scripts]
+ollama-mcp-agent = "ollama_mcp_agent.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ollama_mcp_agent = ["py.typed"]
+    [tool.black]
+    line-length = 100
+    target-version = ["py39"]
+    include = "\\.pyi?$"
+
+    [tool.pytest.ini_options]
+    testpaths = ["tests"]
+    python_files = ["test_*.py"]
+    python_classes = ["Test*"]
+    python_functions = ["test_*"]
+    asyncio_mode = "auto"
+    addopts = "-v --tb=short"
+    filterwarnings = [
+        "ignore::DeprecationWarning",
+        "ignore::RuntimeWarning:unittest.mock",
+    ]
+
+    [tool.ruff]
+    line-length = 100
+    target-version = "py39"
+
+    [tool.mypy]
+    python_version = "3.9"
+    warn_return_any = true
+    warn_unused_configs = true
+    disallow_untyped_defs = false
