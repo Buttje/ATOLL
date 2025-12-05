@@ -384,7 +384,7 @@ Perfect! The professional Python project structure is now complete. You have:
 
 ## ✅ **Complete Project Structure**
 
-1. **Source Code** (`src/ollama_mcp_agent/`)
+1. **Source Code** (`src/atoll/`)
    - Agent module with LangChain integration
    - MCP client and server management
    - Terminal UI with cross-platform support
@@ -419,7 +419,7 @@ Perfect! The professional Python project structure is now complete. You have:
 
 The project is ready for:
 - Development with `pip install -e ".[dev]"`
-- Running with `ollama-mcp-agent` command
+- Running with `atoll` command
 - Testing with `pytest`
 - Code quality checks with `pre-commit`
 - CI/CD with GitHub Actions

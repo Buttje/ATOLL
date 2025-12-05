@@ -16,4 +16,4 @@ class TestMainEntry:
         
         # Reload to trigger execution
         with patch('atoll.__main__.__name__', '__main__'):
-            importlib.reload(ollama_mcp_agent.__main__)
+            importlib.reload(atoll.__main__)
