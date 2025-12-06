@@ -1,8 +1,9 @@
 """Installation script for ATOLL."""
 
+import os
+import shutil
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 
@@ -30,50 +31,65 @@ def main():
     print("=" * 60)
     print("ATOLL Installation")
     print("=" * 60)
-    
+
     # Check Python version
-    if sys.version_info < (3, 9):
+    if sys.version_info < (3, 9):  # noqa: UP036
         print("Error: Python 3.9+ is required")
         sys.exit(1)
-    
+
     print(f"Python {sys.version}")
-    
-    # Check if venv already exists
+
+    # Check if venv already exists and is functional
     venv_path = Path("venv")
-    if not venv_path.exists():
-        # Create virtual environment
-        if not run_command("python -m venv venv", "Creating virtual environment"):
-            sys.exit(1)
-    else:
-        print("✓ Virtual environment already exists")
-    
+    venv_valid = False
+
+    if venv_path.exists():
+        # Verify that critical executables exist
+        if os.name == "nt":  # Windows
+            python_exe = venv_path / "Scripts" / "python.exe"
+            pip_exe = venv_path / "Scripts" / "pip.exe"
+        else:  # Unix/Linux/Mac
+            python_exe = venv_path / "bin" / "python"
+            pip_exe = venv_path / "bin" / "pip"
+
+        if python_exe.exists() and pip_exe.exists():
+            venv_valid = True
+            print("✓ Virtual environment already exists")
+        else:
+            print("⚠ Virtual environment exists but is incomplete, recreating...")
+            # Remove incomplete venv
+            shutil.rmtree(venv_path)
+
+    if not venv_valid and not run_command("python -m venv venv", "Creating virtual environment"):
+        sys.exit(1)
+
     # Determine activation script and pip path
-    if os.name == 'nt':  # Windows
+    if os.name == "nt":  # Windows
         python = "venv\\Scripts\\python.exe"
         pip = "venv\\Scripts\\pip.exe"
     else:  # Unix/Linux/Mac
         python = "venv/bin/python"
         pip = "venv/bin/pip"
-    
+
     # Upgrade pip (ignore errors as it's optional)
     run_command(f"{python} -m pip install --upgrade pip", "Upgrading pip", ignore_errors=True)
-    
+
     # Install package in editable mode with dev dependencies
-    if not run_command(f"{pip} install -e \".[dev]\"", "Installing package"):
+    if not run_command(f'{pip} install -e ".[dev]"', "Installing package"):
         sys.exit(1)
-    
+
     # Install pre-commit hooks (optional)
-    if os.name == 'nt':
+    if os.name == "nt":
         pre_commit_cmd = "venv\\Scripts\\pre-commit.exe install"
     else:
         pre_commit_cmd = "venv/bin/pre-commit install"
-    
+
     run_command(pre_commit_cmd, "Installing pre-commit hooks", ignore_errors=True)
-    
+
     print("\n" + "=" * 60)
     print("✓ Installation complete!")
     print("\nTo activate the environment:")
-    if os.name == 'nt':
+    if os.name == "nt":
         print("  venv\\Scripts\\activate")
     else:
         print("  source venv/bin/activate")
