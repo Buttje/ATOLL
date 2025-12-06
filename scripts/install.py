@@ -60,9 +60,7 @@ def main():
             # Remove incomplete venv
             shutil.rmtree(venv_path)
 
-    if not venv_valid and not run_command(
-        "python -m venv venv", "Creating virtual environment"
-    ):
+    if not venv_valid and not run_command("python -m venv venv", "Creating virtual environment"):
         sys.exit(1)
 
     # Determine activation script and pip path
