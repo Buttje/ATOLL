@@ -88,12 +88,12 @@ class TestApplicationCoverage:
         app.config_manager.mcp_config = Mock(servers={})
 
         with patch.object(app.config_manager, "load_configs"):
-            with patch("atoll.main.MCPServerManager") as mock_manager_class:
+            with patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class:
                 mock_manager = Mock()
                 mock_manager.connect_all = AsyncMock()
                 mock_manager_class.return_value = mock_manager
 
-                with patch("atoll.main.OllamaMCPAgent") as mock_agent_class:
+                with patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class:
                     # Mock the agent's async methods
                     mock_agent_instance = Mock()
                     mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
