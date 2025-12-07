@@ -174,14 +174,6 @@ Think step-by-step and explain your reasoning."""
         self.messages.clear()
         self.ui.display_info("Conversation memory cleared")
 
-    async def list_models(self) -> list[str]:
-        """List available Ollama models."""
-        import aiohttp
-
-        url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
-
-        try:
-            async with aiohttp.ClientSession() as session, session.get(url) as response:
     async def check_server_connection(self) -> bool:
         """Check if Ollama server is reachable."""
         url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
