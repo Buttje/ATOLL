@@ -18,35 +18,35 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_startup(self):
         """Test application startup."""
-        with patch("atoll.config.manager.ConfigManager") as mock_config_manager:
-            with patch("atoll.ui.terminal.TerminalUI"):
-                with patch("atoll.mcp.server_manager.MCPServerManager") as mock_server_manager:
-                    with patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent:
-                        with patch("builtins.print"):  # Mock print to avoid Unicode errors
-                            # Set up mocks
-                            mock_config_instance = mock_config_manager.return_value
-                            mock_config_instance.ollama_config = OllamaConfig()
-                            mock_config_instance.mcp_config = MCPConfig()
-                            mock_config_instance.load_configs = Mock()
+        with (
+            patch("atoll.config.manager.ConfigManager") as mock_config_manager,
+            patch("atoll.ui.terminal.TerminalUI"),
+            patch("atoll.mcp.server_manager.MCPServerManager") as mock_server_manager,
+            patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent,
+            patch("builtins.print"),  # Mock print to avoid Unicode errors
+        ):
+            # Set up mocks
+            mock_config_instance = mock_config_manager.return_value
+            mock_config_instance.ollama_config = OllamaConfig()
+            mock_config_instance.mcp_config = MCPConfig()
+            mock_config_instance.load_configs = Mock()
 
-                            mock_server_instance = mock_server_manager.return_value
-                            mock_server_instance.connect_all = AsyncMock()
+            mock_server_instance = mock_server_manager.return_value
+            mock_server_instance.connect_all = AsyncMock()
 
-                            # Mock the agent's async methods
-                            mock_agent_instance = mock_agent.return_value
-                            mock_agent_instance.check_server_connection = AsyncMock(
-                                return_value=True
-                            )
-                            mock_agent_instance.check_model_available = AsyncMock(return_value=True)
+            # Mock the agent's async methods
+            mock_agent_instance = mock_agent.return_value
+            mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
+            mock_agent_instance.check_model_available = AsyncMock(return_value=True)
 
-                            app = Application()
-                            await app.startup()
+            app = Application()
+            await app.startup()
 
-                            # Verify startup completed successfully
-                            assert app.agent is not None
-                            assert app.mcp_manager is not None
-                            # Verify connect_all was called
-                            assert mock_server_instance.connect_all.called
+            # Verify startup completed successfully
+            assert app.agent is not None
+            assert app.mcp_manager is not None
+            # Verify connect_all was called
+            assert mock_server_instance.connect_all.called
 
     @pytest.mark.asyncio
     async def test_handle_prompt(self):
@@ -123,20 +123,22 @@ class TestApplication:
     @pytest.mark.asyncio
     async def test_run_loop_keyboard_interrupt(self):
         """Test the main run loop with keyboard interrupt."""
-        with patch("atoll.config.manager.ConfigManager"):
-            with patch("atoll.ui.terminal.TerminalUI"):
-                with patch("atoll.mcp.server_manager.MCPServerManager"):
-                    with patch("atoll.agent.agent.OllamaMCPAgent"):
-                        app = Application()
+        with (
+            patch("atoll.config.manager.ConfigManager"),
+            patch("atoll.ui.terminal.TerminalUI"),
+            patch("atoll.mcp.server_manager.MCPServerManager"),
+            patch("atoll.agent.agent.OllamaMCPAgent"),
+        ):
+            app = Application()
 
-                        # Mock startup
-                        app.startup = AsyncMock()
-                        app.ui = Mock()
-                        app.ui.running = True
-                        app.ui.get_input = Mock(side_effect=KeyboardInterrupt)
+            # Mock startup
+            app.startup = AsyncMock()
+            app.ui = Mock()
+            app.ui.running = True
+            app.ui.get_input = Mock(side_effect=KeyboardInterrupt)
 
-                        # Run should handle KeyboardInterrupt gracefully
-                        await app.run()
+            # Run should handle KeyboardInterrupt gracefully
+            await app.run()
 
 
 def test_main_function():
@@ -145,12 +147,16 @@ def test_main_function():
 
     main_module = importlib.import_module("atoll.main")
 
-    with patch("atoll.config.manager.ConfigManager"), patch("atoll.ui.terminal.TerminalUI"):
-        with patch("asyncio.run") as mock_run:
-            main_module.main()
+    with (
+        patch("atoll.config.manager.ConfigManager"),
+        patch("atoll.ui.terminal.TerminalUI"),
+        patch("asyncio.run") as mock_run,
+        patch("sys.argv", ["atoll"]),
+    ):
+        main_module.main()
 
-            # Verify asyncio.run was called with a coroutine
-            mock_run.assert_called_once()
-            assert asyncio.iscoroutine(mock_run.call_args[0][0]) or hasattr(
-                mock_run.call_args[0][0], "__await__"
-            )
+        # Verify asyncio.run was called with a coroutine
+        mock_run.assert_called_once()
+        assert asyncio.iscoroutine(mock_run.call_args[0][0]) or hasattr(
+            mock_run.call_args[0][0], "__await__"
+        )
