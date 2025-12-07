@@ -1,5 +1,6 @@
 """Main entry point for ATOLL."""
 
+import argparse
 import asyncio
 import sys
 from typing import Optional
@@ -487,8 +488,29 @@ Examples:
             await self.agent.process_prompt(prompt)
 
 
+def get_version() -> str:
+    """Get the ATOLL version."""
+    # Import here to avoid circular import
+    from . import __version__
+
+    return __version__
+
+
 def main():
     """Main entry point."""
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        prog="atoll",
+        description="ATOLL - Agentic Tools Orchestration on OLLama",
+    )
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=f"ATOLL {get_version()}",
+    )
+    parser.parse_args()
+
     try:
         app = Application()
         asyncio.run(app.run())
