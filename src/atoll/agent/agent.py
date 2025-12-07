@@ -3,6 +3,8 @@
 import asyncio
 from typing import Any
 
+import aiohttp
+
 # Use the new langchain-ollama package
 try:
     from langchain_ollama import OllamaLLM
@@ -100,6 +102,12 @@ class OllamaMCPAgent:
                 f"Built system prompt with {len(self.tools)} available tools", prefix="[4/5]"
             )
 
+            # Add user message to history
+            self.messages.append(HumanMessage(content=prompt))
+
+            # Build system prompt with available tools
+            system_prompt = self._build_system_prompt()
+
             # Get response from LLM
             full_prompt = f"{system_prompt}\n\nUser: {prompt}\n\nAssistant:"
 
@@ -122,6 +130,8 @@ class OllamaMCPAgent:
                 f"Added assistant response to history (total: {len(self.messages)} messages)",
                 prefix="[Done]",
             )
+            # Add assistant response to history
+            self.messages.append(AIMessage(content=response))
 
             # Display response
             self.ui.display_response(response)
@@ -172,6 +182,33 @@ Think step-by-step and explain your reasoning."""
 
         try:
             async with aiohttp.ClientSession() as session, session.get(url) as response:
+    async def check_server_connection(self) -> bool:
+        """Check if Ollama server is reachable."""
+        url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
+
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+            ):
+                return response.status == 200
+        except Exception:
+            return False
+
+    async def check_model_available(self) -> bool:
+        """Check if the configured model is available."""
+        models = await self.list_models()
+        return self.ollama_config.model in models
+
+    async def list_models(self) -> list[str]:
+        """List available Ollama models."""
+        url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
+
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+            ):
                 data = await response.json()
                 models = [model["name"] for model in data.get("models", [])]
                 return models

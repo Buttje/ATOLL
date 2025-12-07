@@ -32,6 +32,8 @@ class TestApplicationExtended:
                 # Mock agent
                 with patch('atoll.main.OllamaMCPAgent') as mock_agent_class:
                     mock_agent = mock_agent_class.return_value
+                    mock_agent.check_server_connection = AsyncMock(return_value=True)
+                    mock_agent.check_model_available = AsyncMock(return_value=True)
                     
                     await app.startup()
                     
