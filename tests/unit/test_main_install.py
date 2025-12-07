@@ -27,15 +27,20 @@ class TestHandleInstallCommand:
         app.ui = Mock()
         app.installer = Mock()
         app.installer.install_server = AsyncMock(return_value=True)
-        app.mcp_manager = Mock()
-        app.mcp_manager.disconnect_all = AsyncMock()
-        app.mcp_manager.connect_all = AsyncMock()
+        
+        # Create mock manager
+        mock_manager = Mock()
+        mock_manager.disconnect_all = AsyncMock()
+        mock_manager.connect_all = AsyncMock()
+        app.mcp_manager = mock_manager
+        
         app.config_manager = Mock()
         app.config_manager.load_configs = Mock()
+        app.config_manager.mcp_config = Mock()
         app.agent = Mock()
 
-        with patch("atoll.main.MCPServerManager") as mock_mcp_manager:
-            mock_mcp_manager.return_value = app.mcp_manager
+        with patch("atoll.main.MCPServerManager") as MockMCPServerManager:
+            MockMCPServerManager.return_value = mock_manager
             await app.handle_install_command(["install", "/path/to/server"])
 
         app.installer.install_server.assert_called_once_with("/path/to/server", None, None)
@@ -47,15 +52,20 @@ class TestHandleInstallCommand:
         app.ui = Mock()
         app.installer = Mock()
         app.installer.install_server = AsyncMock(return_value=True)
-        app.mcp_manager = Mock()
-        app.mcp_manager.disconnect_all = AsyncMock()
-        app.mcp_manager.connect_all = AsyncMock()
+        
+        # Create mock manager
+        mock_manager = Mock()
+        mock_manager.disconnect_all = AsyncMock()
+        mock_manager.connect_all = AsyncMock()
+        app.mcp_manager = mock_manager
+        
         app.config_manager = Mock()
         app.config_manager.load_configs = Mock()
+        app.config_manager.mcp_config = Mock()
         app.agent = Mock()
 
-        with patch("atoll.main.MCPServerManager") as mock_mcp_manager:
-            mock_mcp_manager.return_value = app.mcp_manager
+        with patch("atoll.main.MCPServerManager") as MockMCPServerManager:
+            MockMCPServerManager.return_value = mock_manager
             await app.handle_install_command(
                 ["install", "/path/to/server", "--name", "myserver", "--type", "dir"]
             )
@@ -84,7 +94,35 @@ class TestHelpSystem:
         """Test help server command."""
         app = Application()
         app.ui = Mock()
+        app.config_manager = Mock()
+        app.config_manager.mcp_config = Mock()
+        
+        # Create proper mock for server config
+        mock_server_config = Mock()
+        mock_server_config.transport = "stdio"
+        mock_server_config.command = "python"
+        mock_server_config.args = ["server.py"]
+        mock_server_config.url = None
+        mock_server_config.timeoutSeconds = 30
+        mock_server_config.env = {"KEY": "value"}
+        
+        app.config_manager.mcp_config.servers = {
+            "test-server": mock_server_config
+        }
+        
         app.mcp_manager = Mock()
+        app.mcp_manager.get_client = Mock(return_value=Mock(connected=True))
+        app.mcp_manager.tool_registry = Mock()
+        app.mcp_manager.tool_registry.list_server_tools = Mock(
+            return_value=["tool1"]
+        )
+        app.mcp_manager.tool_registry.get_tool = Mock(
+            return_value={
+                "name": "tool1",
+                "description": "Test tool",
+                "inputSchema": {"properties": {"param1": {"type": "string"}}},
+            }
+        )
         app.mcp_manager.clients = {
             "test-server": Mock(
                 config=Mock(transport="stdio", command="python", args=["server.py"])
@@ -107,19 +145,22 @@ class TestHelpSystem:
         app.colors.reasoning = Mock(return_value="REASONING")
 
         with patch("builtins.print"):
-            app.display_help_server("test-server")
+            app.display_server_help("test-server")
 
     def test_display_help_server_not_found(self):
         """Test help server command for non-existent server."""
         app = Application()
         app.ui = Mock()
+        app.config_manager = Mock()
+        app.config_manager.mcp_config = Mock()
+        app.config_manager.mcp_config.servers = {}
         app.mcp_manager = Mock()
-        app.mcp_manager.clients = {}
+        app.mcp_manager.get_client = Mock(return_value=None)
         app.colors = Mock()
         app.colors.warning = Mock(return_value="WARNING")
 
         with patch("builtins.print"):
-            app.display_help_server("nonexistent")
+            app.display_server_help("nonexistent")
 
     def test_display_help_tool(self):
         """Test help tool command."""
@@ -155,7 +196,7 @@ class TestHelpSystem:
         app.colors.answer_text = Mock(return_value="ANSWER")
 
         with patch("builtins.print"):
-            app.display_help_tool("test_tool")
+            app.display_tool_help("test_tool")
 
     def test_display_help_tool_not_found(self):
         """Test help tool command for non-existent tool."""
@@ -168,7 +209,7 @@ class TestHelpSystem:
         app.colors.warning = Mock(return_value="WARNING")
 
         with patch("builtins.print"):
-            app.display_help_tool("nonexistent")
+            app.display_tool_help("nonexistent")
 
     def test_display_help_tool_no_schema(self):
         """Test help tool command for tool without input schema."""
@@ -190,7 +231,7 @@ class TestHelpSystem:
         app.colors.answer_text = Mock(return_value="ANSWER")
 
         with patch("builtins.print"):
-            app.display_help_tool("test_tool")
+            app.display_tool_help("test_tool")
 
 
 class TestSetOllamaServer:
