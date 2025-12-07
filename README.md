@@ -105,7 +105,7 @@ git clone https://github.com/Buttje/ATOLL.git
 cd ATOLL
 
 # Run the automated installer
-python scripts/install.py
+python install.py
 ```
 
 #### Option 2: Manual Installation
@@ -515,7 +515,7 @@ Comprehensive documentation is available in the `docs/` directory:
 **Solution**: Create a `.ollamaConfig.json` file in your working directory with the required configuration. See [Configuration](#configuration) section.
 
 #### Issue: "Connection refused to Ollama"
-**Solution**: 
+**Solution**:
 1. Ensure Ollama is running: `ollama serve`
 2. Check the port in your config matches Ollama's port (default: 11434)
 3. Verify with: `curl http://localhost:11434/api/tags`
@@ -652,50 +652,50 @@ Want to influence the roadmap? [Join the discussion](https://github.com/Buttje/A
 
 ### General Questions
 
-**Q: What is ATOLL?**  
+**Q: What is ATOLL?**
 A: ATOLL is an AI agent framework that connects Ollama LLMs with external tools via the Model Context Protocol (MCP).
 
-**Q: Do I need an API key?**  
+**Q: Do I need an API key?**
 A: No! ATOLL uses local Ollama models, so no API keys or cloud services are required.
 
-**Q: What models are supported?**  
+**Q: What models are supported?**
 A: Any model available in Ollama (llama2, mistral, codellama, etc.). See [Ollama's model library](https://ollama.ai/library).
 
-**Q: Can I use this commercially?**  
+**Q: Can I use this commercially?**
 A: Yes! ATOLL is MIT licensed. Check individual model licenses for commercial use restrictions.
 
 ### Technical Questions
 
-**Q: How do I add custom tools?**  
+**Q: How do I add custom tools?**
 A: Create an MCP server that implements your tools, then configure it in `.mcpConfig.json`. See the [MCP Integration Guide](docs/guides/mcp_integration.md).
 
-**Q: Can I use multiple models simultaneously?**  
+**Q: Can I use multiple models simultaneously?**
 A: Currently, one model at a time, but you can switch models without restarting using the `ChangeModel` command.
 
-**Q: Does it support streaming responses?**  
+**Q: Does it support streaming responses?**
 A: Not yet in the current version. Streaming support is planned for v1.1.0.
 
-**Q: What's the performance like?**  
+**Q: What's the performance like?**
 A: Local operations are fast (<2s for most queries). Performance depends on your hardware and the model size.
 
-**Q: Can I run this in a Docker container?**  
+**Q: Can I run this in a Docker container?**
 A: Not officially packaged yet, but it's straightforward to containerize. Docker support is planned for v1.2.0.
 
 ### Deployment Questions
 
-**Q: Can I deploy this to a server?**  
+**Q: Can I deploy this to a server?**
 A: Yes! The current version runs in terminal mode. API server mode is coming in v1.2.0.
 
-**Q: What are the hardware requirements?**  
+**Q: What are the hardware requirements?**
 A: Minimum 8GB RAM, 16GB recommended. Requirements scale with model size.
 
-**Q: Can I use remote Ollama instances?**  
+**Q: Can I use remote Ollama instances?**
 A: Yes! Configure the `base_url` and `port` in `.ollamaConfig.json` to point to a remote server. You can also use the `SetServer` command at runtime to switch between different Ollama servers without restarting.
 
-**Q: How do I know if my Ollama server is reachable?**  
+**Q: How do I know if my Ollama server is reachable?**
 A: ATOLL automatically checks the server connection on startup and displays a clear status indicator. You'll see either "✓ Ollama server is reachable" or "✗ Cannot reach Ollama server" with helpful suggestions.
 
-**Q: What if my model isn't available?**  
+**Q: What if my model isn't available?**
 A: ATOLL checks model availability on startup. If your configured model isn't found, you'll see a warning. Use the `Models` command to see available models and `ChangeModel` to switch, or pull the model using `ollama pull <model-name>`.
 
 ---
