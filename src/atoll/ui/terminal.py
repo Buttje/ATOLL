@@ -55,7 +55,7 @@ class TerminalUI:
         """Display application header with current mode."""
         self._clear_screen()
         print(self.colors.header("=" * 60))
-        print(self.colors.header("Ollama MCP Agent"))
+        print(self.colors.header("ATOLL - Agentic Tools Orchestration on OLLama"))
         verbose_indicator = " | Verbose: ON" if self.verbose else ""
         print(
             self.colors.header(f"Mode: {self.mode.value} (Press ESC to toggle){verbose_indicator}")

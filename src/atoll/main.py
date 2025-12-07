@@ -214,8 +214,8 @@ class Application:
     def display_help(self) -> None:
         """Display help information for available commands."""
         help_text = """
-Available Commands:
--------------------
+ATOLL - Available Commands:
+---------------------------
   help                    - Display this help message
   help server <name>      - Show details about a specific MCP server
   help tool <name>        - Show details about a specific tool
@@ -225,13 +225,13 @@ Available Commands:
   clear                   - Clear conversation memory
   servers                 - List connected MCP servers
   tools                   - List available MCP tools
-  quit                    - Exit the application
+  quit                    - Exit ATOLL
 
 Navigation:
 -----------
   ESC                     - Toggle between Prompt and Command mode
   Ctrl+V                  - Toggle verbose output mode
-  Ctrl+C                  - Exit the application
+  Ctrl+C                  - Exit ATOLL
 
 Prompt Mode:
 ------------
@@ -382,9 +382,7 @@ Examples:
             )
         )
         print(
-            self.colors.reasoning(
-                "  You can ask questions that require this tool's functionality."
-            )
+            self.colors.reasoning("  You can ask questions that require this tool's functionality.")
         )
         print()
 
