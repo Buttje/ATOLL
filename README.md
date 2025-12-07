@@ -141,9 +141,9 @@ pip install -e ".[dev]"
 
 ATOLL requires two configuration files in JSON format:
 
-#### 1. Ollama Configuration (`.ollamaConfig.json`)
+#### 1. Ollama Configuration (`~/.ollama_server/.ollama_config.json`)
 
-Create this file in your working directory:
+Create this file in your home directory under `.ollama_server/`:
 
 ```json
 {
@@ -512,7 +512,7 @@ Comprehensive documentation is available in the `docs/` directory:
 ### Common Issues
 
 #### Issue: "Ollama config not found"
-**Solution**: Create a `.ollamaConfig.json` file in your working directory with the required configuration. See [Configuration](#configuration) section.
+**Solution**: Create a `~/.ollama_server/.ollama_config.json` file with the required configuration. See [Configuration](#configuration) section. You can also let ATOLL create one with defaults on first run.
 
 #### Issue: "Connection refused to Ollama"
 **Solution**:
@@ -690,7 +690,7 @@ A: Yes! The current version runs in terminal mode. API server mode is coming in 
 A: Minimum 8GB RAM, 16GB recommended. Requirements scale with model size.
 
 **Q: Can I use remote Ollama instances?**
-A: Yes! Configure the `base_url` and `port` in `.ollamaConfig.json` to point to a remote server. You can also use the `SetServer` command at runtime to switch between different Ollama servers without restarting.
+A: Yes! Configure the `base_url` and `port` in `~/.ollama_server/.ollama_config.json` to point to a remote server. You can also use the `setserver` command at runtime to switch between different Ollama servers without restarting. Changes made via commands are automatically saved.
 
 **Q: How do I know if my Ollama server is reachable?**
 A: ATOLL automatically checks the server connection on startup and displays a clear status indicator. You'll see either "✓ Ollama server is reachable" or "✗ Cannot reach Ollama server" with helpful suggestions.

@@ -7,7 +7,7 @@ ATOLL is a LangChain-based AI agent that bridges Ollama LLMs with MCP (Model Con
 - **Application Layer** (`main.py`): Orchestrates startup, manages dual-mode UI (Command/Prompt), handles user interaction loop
 - **Agent Layer** (`agent/`): LangChain integration, reasoning engine, tool wrappers for MCP
 - **MCP Layer** (`mcp/`): Server manager, clients (stdio/SSE/HTTP), tool registry for cross-server tool discovery
-- **Configuration** (`config/`): Pydantic dataclasses for type-safe configs (`.ollamaConfig.json`, `.mcpConfig.json`)
+- **Configuration** (`config/`): Pydantic dataclasses for type-safe configs (`~/.ollama_server/.ollama_config.json`, `.mcpConfig.json`)
 - **UI Layer** (`ui/`): Terminal interface with mode toggling (ESC key), color schemes, input handling
 
 **Key Data Flow**: User input → TerminalUI → Application.handle_prompt/command → OllamaMCPAgent → MCPServerManager → MCPClient (stdio subprocess) → Tool execution → Response formatting → Display
@@ -34,8 +34,11 @@ wrapper = MCPToolWrapper(name, description, mcp_manager, server_name)
 - Commands are case-insensitive but preserve case in arguments: `parts[0].lower()` for command, preserve case for `parts[1:]`
 
 ### Configuration Management
-- Configs loaded at startup from JSON files in working directory
+- Ollama config stored in `~/.ollama_server/.ollama_config.json` (user home directory)
+- MCP config in working directory (`.mcpConfig.json`)
 - `ConfigManager` uses `Path` for file handling, validates with Pydantic dataclasses
+- Directory `~/.ollama_server/` created automatically on first run
+- Configuration changes via commands (`changemodel`, `setserver`) are persisted to disk automatically
 - Environment variable expansion in MCP commands: `os.path.expandvars()`
 - Default fallbacks when configs missing (see `OllamaConfig()` and `MCPConfig()`)
 

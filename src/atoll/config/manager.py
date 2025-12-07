@@ -15,7 +15,8 @@ logger = get_logger(__name__)
 class ConfigManager:
     """Manages application configurations."""
     
-    DEFAULT_OLLAMA_CONFIG = ".ollamaConfig.json"
+    DEFAULT_OLLAMA_CONFIG_DIR = Path.home() / ".ollama_server"
+    DEFAULT_OLLAMA_CONFIG_FILE = ".ollama_config.json"
     DEFAULT_MCP_CONFIG = ".mcpConfig.json"
     
     def __init__(
@@ -24,7 +25,14 @@ class ConfigManager:
         mcp_config_path: Optional[Path] = None,
     ):
         """Initialize configuration manager."""
-        self.ollama_config_path = ollama_config_path or Path(self.DEFAULT_OLLAMA_CONFIG)
+        if ollama_config_path is None:
+            # Use ~/.ollama_server/.ollama_config.json
+            self.ollama_config_path = self.DEFAULT_OLLAMA_CONFIG_DIR / self.DEFAULT_OLLAMA_CONFIG_FILE
+            # Ensure the directory exists
+            self.DEFAULT_OLLAMA_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        else:
+            self.ollama_config_path = ollama_config_path
+        
         self.mcp_config_path = mcp_config_path or Path(self.DEFAULT_MCP_CONFIG)
         
         self.ollama_config: Optional[OllamaConfig] = None
@@ -68,6 +76,9 @@ class ConfigManager:
     def save_ollama_config(self) -> None:
         """Save current Ollama configuration."""
         if self.ollama_config:
+            # Ensure directory exists
+            self.ollama_config_path.parent.mkdir(parents=True, exist_ok=True)
+            
             data = {
                 "base_url": self.ollama_config.base_url,
                 "port": self.ollama_config.port,

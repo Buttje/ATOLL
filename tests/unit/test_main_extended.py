@@ -81,10 +81,14 @@ class TestApplicationExtended:
         app.ui = Mock()
         app.agent = Mock()
         app.agent.change_model = Mock(return_value=True)
+        app.config_manager.ollama_config = Mock()
+        app.config_manager.save_ollama_config = Mock()
 
         await app.handle_command("changemodel llama2")
 
         app.agent.change_model.assert_called_once_with("llama2")
+        assert app.config_manager.ollama_config.model == "llama2"
+        app.config_manager.save_ollama_config.assert_called_once()
         app.ui.display_info.assert_called_once()
 
     @pytest.mark.asyncio

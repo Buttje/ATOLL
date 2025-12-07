@@ -57,7 +57,7 @@ pip install -e ".[dev]"
 ## Configuration
 
 ### Ollama Configuration
-Create `.ollamaConfig.json`:
+Create `~/.ollama_server/.ollama_config.json`:
 ```json
 {
   "base_url": "http://localhost",

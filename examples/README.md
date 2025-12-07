@@ -67,7 +67,8 @@ Example configuration for MCP servers with different transports:
 
 1. Copy the example files to your project root:
    ```bash
-   cp examples/.ollamaConfig.example.json .ollamaConfig.json
+   mkdir -p ~/.ollama_server
+   cp examples/.ollama_config.example.json ~/.ollama_server/.ollama_config.json
    cp examples/.mcpConfig.example.json .mcpConfig.json
    ```
 
@@ -83,7 +84,8 @@ Example configuration for MCP servers with different transports:
 
 ## Notes
 
-- Configuration files in the project root (`.ollamaConfig.json`, `.mcpConfig.json`) are ignored by git
+- The Ollama configuration is stored in `~/.ollama_server/.ollama_config.json` (user home directory)
+- MCP configuration file in the project root (`.mcpConfig.json`) is ignored by git
 - Start with an empty servers object in `.mcpConfig.json` if you don't have MCP servers yet
 - Make sure Ollama is running: `ollama serve`
 - Pull required models: `ollama pull llama2`

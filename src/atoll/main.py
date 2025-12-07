@@ -178,6 +178,9 @@ class Application:
                 model_name = parts[1]  # Preserve case
                 if self.agent.change_model(model_name):
                     self.ui.display_info(f"Model changed to: {model_name}")
+                    # Update config and persist to file
+                    self.config_manager.ollama_config.model = model_name
+                    self.config_manager.save_ollama_config()
             else:
                 self.ui.display_error("Usage: changemodel <model-name>")
 

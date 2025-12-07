@@ -14,10 +14,13 @@ class TestConfigManager:
         """Test config manager initialization."""
         manager = ConfigManager()
 
-        assert manager.ollama_config_path == Path(".ollamaConfig.json")
+        expected_ollama_path = Path.home() / ".ollama_server" / ".ollama_config.json"
+        assert manager.ollama_config_path == expected_ollama_path
         assert manager.mcp_config_path == Path(".mcpConfig.json")
         assert manager.ollama_config is None
         assert manager.mcp_config is None
+        # Verify the directory was created
+        assert manager.ollama_config_path.parent.exists()
 
     def test_initialization_with_paths(self, tmp_path):
         """Test config manager with custom paths."""
