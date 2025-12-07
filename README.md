@@ -202,6 +202,14 @@ atoll
 python -m atoll
 ```
 
+**Startup Indicators:**
+
+When ATOLL starts, it checks and displays:
+- ✓ **Ollama Server Status**: Whether the Ollama server is reachable at the configured URL and port
+- ✓ **Model Availability**: Whether the configured model is available on the server
+
+If the server is unreachable or the model is unavailable, you'll see warning messages with suggestions.
+
 #### Basic Interaction
 
 Once started, you'll see the interactive terminal interface:
@@ -225,6 +233,9 @@ Models
 
 # Switch to a different model
 ChangeModel mistral
+
+# Configure Ollama server connection
+SetServer http://localhost 11434
 
 # List connected MCP servers
 Servers
@@ -288,6 +299,7 @@ Press `ESC` to toggle between modes at any time.
 |---------|-------------|
 | `Models` | List all available Ollama models |
 | `ChangeModel <model>` | Switch to a different model |
+| `SetServer <url> [port]` | Configure Ollama server connection (e.g., `SetServer http://localhost 11434`) |
 | `Servers` | List connected MCP servers |
 | `Tools` | List available MCP tools |
 | `help` | Display help information |
@@ -507,9 +519,14 @@ Comprehensive documentation is available in the `docs/` directory:
 1. Ensure Ollama is running: `ollama serve`
 2. Check the port in your config matches Ollama's port (default: 11434)
 3. Verify with: `curl http://localhost:11434/api/tags`
+4. Use the `SetServer` command to configure the correct URL and port
+
+**Note**: ATOLL now displays connection status on startup. If you see "✗ Cannot reach Ollama server", follow the steps above or use `SetServer` to configure the correct connection.
 
 #### Issue: "Model not found"
 **Solution**: Pull the model first: `ollama pull llama2`
+
+**Note**: ATOLL checks model availability on startup. If you see "⚠ Model 'xyz' is not available", either pull the model or use `ChangeModel` to switch to an available model (shown with `Models` command).
 
 #### Issue: "MCP server failed to connect"
 **Solution**:
@@ -673,7 +690,13 @@ A: Yes! The current version runs in terminal mode. API server mode is coming in 
 A: Minimum 8GB RAM, 16GB recommended. Requirements scale with model size.
 
 **Q: Can I use remote Ollama instances?**  
-A: Yes! Configure the `base_url` in `.ollamaConfig.json` to point to a remote server.
+A: Yes! Configure the `base_url` and `port` in `.ollamaConfig.json` to point to a remote server. You can also use the `SetServer` command at runtime to switch between different Ollama servers without restarting.
+
+**Q: How do I know if my Ollama server is reachable?**  
+A: ATOLL automatically checks the server connection on startup and displays a clear status indicator. You'll see either "✓ Ollama server is reachable" or "✗ Cannot reach Ollama server" with helpful suggestions.
+
+**Q: What if my model isn't available?**  
+A: ATOLL checks model availability on startup. If your configured model isn't found, you'll see a warning. Use the `Models` command to see available models and `ChangeModel` to switch, or pull the model using `ollama pull <model-name>`.
 
 ---
 
