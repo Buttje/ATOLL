@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from atoll.config.manager import ConfigManager
-from atoll.config.models import OllamaConfig
+from atoll.config.models import OllamaConfig, MCPServerConfig
 
 
 class TestConfigManager:
@@ -137,3 +137,40 @@ class TestConfigManager:
         config = manager.load_ollama_config()
         assert config.model == "llama2"  # Changed to match actual default
         assert isinstance(config, OllamaConfig)
+
+
+class TestMCPServerConfig:
+    """Test MCPServerConfig model."""
+
+    def test_to_dict_all_fields(self):
+        """Test to_dict with all fields populated."""
+        config = MCPServerConfig(
+            transport="stdio",
+            command="python",
+            args=["server.py", "--port=8080"],
+            env={"PATH": "/usr/bin"},
+            url="http://localhost",
+            timeoutSeconds=60,
+            cwd="/path/to/server",
+        )
+        result = config.to_dict()
+        assert result["transport"] == "stdio"
+        assert result["command"] == "python"
+        assert result["args"] == ["server.py", "--port=8080"]
+        assert result["env"] == {"PATH": "/usr/bin"}
+        assert result["url"] == "http://localhost"
+        assert result["timeoutSeconds"] == 60
+        assert result["cwd"] == "/path/to/server"
+
+    def test_to_dict_minimal(self):
+        """Test to_dict with minimal fields."""
+        config = MCPServerConfig(transport="http")
+        result = config.to_dict()
+        assert result == {"transport": "http"}
+
+    def test_to_dict_default_timeout(self):
+        """Test to_dict excludes default timeout."""
+        config = MCPServerConfig(transport="stdio", timeoutSeconds=30)
+        result = config.to_dict()
+        assert "timeoutSeconds" not in result
+

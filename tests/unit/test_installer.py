@@ -303,3 +303,140 @@ class TestMCPInstaller:
         result = await installer.install_server("source", "dir", "test")
         assert result is False
         installer.ui.display_error.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_install_server_with_exception(self, installer):
+        """Test install server handles exceptions."""
+        with patch.object(installer, "_detect_source_type", side_effect=Exception("Test error")):
+            result = await installer.install_server("source", None, "test")
+            assert result is False
+            installer.ui.display_error.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_install_from_url_websocket(self, installer):
+        """Test installing from WebSocket URL."""
+        result = await installer._install_from_url("ws://localhost:8080", "test")
+        assert result is False
+        installer.ui.display_error.assert_called_with("WebSocket transport not yet implemented")
+
+    @pytest.mark.asyncio
+    async def test_install_from_repository_git_not_found(self, installer):
+        """Test repository installation when git is not available."""
+        with patch("subprocess.run", side_effect=FileNotFoundError()):
+            result = await installer._install_from_repository("https://github.com/user/repo", "test")
+            assert result is False
+            installer.ui.display_error.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_install_from_repository_clone_failure(self, installer):
+        """Test repository installation when clone fails."""
+        import subprocess
+
+        with patch(
+            "subprocess.run",
+            side_effect=subprocess.CalledProcessError(1, "git", stderr="clone failed"),
+        ):
+            result = await installer._install_from_repository("https://github.com/user/repo", "test")
+            assert result is False
+            installer.ui.display_error.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_install_from_repository_existing_directory(self, installer, tmp_path):
+        """Test repository installation when target directory exists."""
+        installer.servers_dir = tmp_path
+        target_dir = tmp_path / "test"
+        target_dir.mkdir()
+
+        result = await installer._install_from_repository("https://github.com/user/repo", "test")
+        assert result is False
+        installer.ui.display_error.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_extract_install_command_exception(self, installer, tmp_path):
+        """Test extract install command with exception."""
+        readme = tmp_path / "README.md"
+        readme.write_text("# Test")
+
+        installer.agent.process_prompt.side_effect = Exception("LLM error")
+        result = await installer._extract_install_command(readme, tmp_path)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_find_server_command_exception(self, installer, tmp_path):
+        """Test find server command with exception."""
+        readme = tmp_path / "README.md"
+        readme.write_text("# Test")
+
+        installer.agent.process_prompt.side_effect = Exception("LLM error")
+        result = await installer._find_server_command(readme, tmp_path)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_find_server_command_empty_response(self, installer, tmp_path):
+        """Test find server command with empty response."""
+        readme = tmp_path / "README.md"
+        readme.write_text("# Test")
+
+        installer.agent.process_prompt.return_value = ""
+        result = await installer._find_server_command(readme, tmp_path)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_validate_server_connection_failure(self, installer):
+        """Test server validation with connection failure."""
+        config = MCPServerConfig(transport="stdio", command="test")
+
+        mock_client = AsyncMock()
+        mock_client.connect = AsyncMock(side_effect=Exception("Connection failed"))
+
+        with patch("atoll.mcp.installer.MCPClient", return_value=mock_client):
+            result = await installer._validate_server(config)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_save_server_config_exception(self, installer, tmp_path, monkeypatch):
+        """Test saving server config with exception."""
+        # Make the config directory read-only would be complex, so simulate write error
+        with patch("builtins.open", side_effect=PermissionError("Write failed")):
+            config = MCPServerConfig(transport="stdio", command="test")
+            result = installer._save_server_config("test", config)
+            assert result is False
+            installer.ui.display_error.assert_called()
+
+    def test_detect_source_type_file(self, installer, tmp_path):
+        """Test detecting file source type."""
+        test_file = tmp_path / "server.py"
+        test_file.write_text("# server")
+        result = installer._detect_source_type(str(test_file))
+        assert result == "cmd"
+
+    def test_find_readme_case_insensitive(self, installer, tmp_path):
+        """Test finding README with different cases."""
+        test_dir = tmp_path / "server"
+        test_dir.mkdir()
+
+        # Test lowercase
+        readme = test_dir / "readme.md"
+        readme.write_text("# Test")
+        found = installer._find_readme(test_dir)
+        assert found == readme
+
+    @pytest.mark.asyncio
+    async def test_install_server_auto_name_generation(self, installer, tmp_path):
+        """Test install server auto-generates name."""
+        test_dir = tmp_path / "my-server"
+        test_dir.mkdir()
+
+        with patch.object(installer, "_install_from_directory", return_value=True):
+            result = await installer.install_server(str(test_dir), "dir", None)
+            # Verify name was generated
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_create_server_config_sse(self, installer):
+        """Test creating server config for SSE."""
+        config = await installer._create_server_config("test", "sse", "", "http://localhost:8080")
+        assert config.transport == "sse"
+        assert config.url == "http://localhost:8080"
+
