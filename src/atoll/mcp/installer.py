@@ -381,15 +381,25 @@ If multiple commands are needed, separate them with &&.
 Do not include any explanation, just the command.
 If no installation is needed, respond with: NONE"""
 
-            response = await self.agent.process_prompt(prompt)
-            command = response.strip()
+            try:
+                response = await self.agent.process_prompt(prompt)
+                command = response.strip()
 
-            if command == "NONE" or not command:
+                if command == "NONE" or not command:
+                    return None
+
+                self.logger.info(f"Extracted install command: {command}")
+                self.ui.display_verbose(f"Installation command: {command}")
+                return command
+            except Exception as llm_error:
+                self.logger.error(f"LLM failed to process README: {llm_error}")
+                self.ui.display_error(
+                    "Failed to analyze README with LLM. Please ensure a valid Ollama model is configured."
+                )
+                self.ui.display_info(
+                    "You can change the model with: changemodel <model-name>"
+                )
                 return None
-
-            self.logger.info(f"Extracted install command: {command}")
-            self.ui.display_verbose(f"Installation command: {command}")
-            return command
 
         except Exception as e:
             self.logger.error(f"Failed to extract install command: {e}")
@@ -418,15 +428,22 @@ Do not include installation commands, just the command to run the server.
 Do not include any explanation, just the command.
 """
 
-            response = await self.agent.process_prompt(prompt)
-            command = response.strip()
+            try:
+                response = await self.agent.process_prompt(prompt)
+                command = response.strip()
 
-            if not command:
+                if not command:
+                    return None
+
+                self.logger.info(f"Extracted server command: {command}")
+                self.ui.display_verbose(f"Server command: {command}")
+                return command
+            except Exception as llm_error:
+                self.logger.error(f"LLM failed to process README: {llm_error}")
+                self.ui.display_error(
+                    "Failed to analyze README with LLM. Please ensure a valid Ollama model is configured."
+                )
                 return None
-
-            self.logger.info(f"Extracted server command: {command}")
-            self.ui.display_verbose(f"Server command: {command}")
-            return command
 
         except Exception as e:
             self.logger.error(f"Failed to extract server command: {e}")
