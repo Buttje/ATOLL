@@ -76,10 +76,31 @@ class OllamaMCPAgent:
             # Display user input
             self.ui.display_user_input(prompt)
 
+            # Verbose: Show analysis start
+            self.ui.display_verbose("Starting prompt analysis...", prefix="[1/5]")
+
             # Apply reasoning
             reasoning = self.reasoning_engine.analyze(prompt, self.tools)
             if reasoning:
                 self.ui.display_reasoning("\n".join(reasoning))
+                self.ui.display_verbose(
+                    f"Reasoning engine generated {len(reasoning)} insights", prefix="[2/5]"
+                )
+            else:
+                self.ui.display_verbose("No specific reasoning patterns detected", prefix="[2/5]")
+
+            # Add user message to history
+            self.messages.append(HumanMessage(content=prompt))
+            self.ui.display_verbose(
+                f"Added user message to conversation history (total: {len(self.messages)} messages)",
+                prefix="[3/5]",
+            )
+
+            # Build system prompt with available tools
+            system_prompt = self._build_system_prompt()
+            self.ui.display_verbose(
+                f"Built system prompt with {len(self.tools)} available tools", prefix="[4/5]"
+            )
 
             # Add user message to history
             self.messages.append(HumanMessage(content=prompt))
@@ -90,10 +111,25 @@ class OllamaMCPAgent:
             # Get response from LLM
             full_prompt = f"{system_prompt}\n\nUser: {prompt}\n\nAssistant:"
 
+            self.ui.display_verbose(
+                f"Sending request to LLM (model: {self.ollama_config.model})...", prefix="[5/5]"
+            )
+            self.ui.display_verbose(
+                "Waiting for LLM response (this may take a moment)...", prefix="[LLM]"
+            )
+
             # Ollama LLM doesn't have ainvoke, so we run invoke in executor
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(None, self.llm.invoke, full_prompt)
 
+            self.ui.display_verbose("Received response from LLM", prefix="[LLM]")
+
+            # Add assistant response to history
+            self.messages.append(AIMessage(content=response))
+            self.ui.display_verbose(
+                f"Added assistant response to history (total: {len(self.messages)} messages)",
+                prefix="[Done]",
+            )
             # Add assistant response to history
             self.messages.append(AIMessage(content=response))
 
@@ -105,6 +141,9 @@ class OllamaMCPAgent:
         except Exception as e:
             error_msg = f"Error processing prompt: {e}"
             self.ui.display_error(error_msg)
+            self.ui.display_verbose(
+                f"Exception details: {type(e).__name__}: {str(e)}", prefix="[Error]"
+            )
             return error_msg
 
     def _build_system_prompt(self) -> str:
@@ -135,6 +174,14 @@ Think step-by-step and explain your reasoning."""
         self.messages.clear()
         self.ui.display_info("Conversation memory cleared")
 
+    async def list_models(self) -> list[str]:
+        """List available Ollama models."""
+        import aiohttp
+
+        url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
+
+        try:
+            async with aiohttp.ClientSession() as session, session.get(url) as response:
     async def check_server_connection(self) -> bool:
         """Check if Ollama server is reachable."""
         url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"

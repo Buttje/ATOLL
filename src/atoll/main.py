@@ -29,6 +29,10 @@ class Application:
         # Load configurations
         self.config_manager.load_configs()
 
+        # Connect to Ollama
+        print(self.colors.info("Connecting to Ollama..."))
+        # Test connection will happen when agent is created
+
         # Connect to MCP servers
         self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
         await self.mcp_manager.connect_all()
@@ -95,6 +99,11 @@ class Application:
                     # Check for ESC key
                     if user_input == "ESC":
                         self.ui.toggle_mode()
+                        continue
+
+                    # Check for Ctrl+V key
+                    if user_input == "CTRL_V":
+                        self.ui.toggle_verbose()
                         continue
 
                     # Handle based on mode
@@ -221,6 +230,7 @@ Available Commands:
 Navigation:
 -----------
   ESC                     - Toggle between Prompt and Command mode
+  Ctrl+V                  - Toggle verbose output mode
   Ctrl+C                  - Exit the application
 
 Prompt Mode:
