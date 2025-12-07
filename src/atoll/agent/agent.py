@@ -3,6 +3,8 @@
 import asyncio
 from typing import Any
 
+import aiohttp
+
 # Use the new langchain-ollama package
 try:
     from langchain_ollama import OllamaLLM
@@ -135,8 +137,6 @@ Think step-by-step and explain your reasoning."""
 
     async def check_server_connection(self) -> bool:
         """Check if Ollama server is reachable."""
-        import aiohttp
-
         url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
 
         try:
@@ -155,12 +155,13 @@ Think step-by-step and explain your reasoning."""
 
     async def list_models(self) -> list[str]:
         """List available Ollama models."""
-        import aiohttp
-
         url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
 
         try:
-            async with aiohttp.ClientSession() as session, session.get(url) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+            ):
                 data = await response.json()
                 models = [model["name"] for model in data.get("models", [])]
                 return models
