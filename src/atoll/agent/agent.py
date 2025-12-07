@@ -178,4 +178,3 @@ Think step-by-step and explain your reasoning."""
         except Exception as e:
             self.ui.display_error(f"Failed to list models: {e}")
             return []
-            return []

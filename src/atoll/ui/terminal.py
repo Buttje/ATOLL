@@ -6,11 +6,6 @@ import textwrap
 from enum import Enum
 from typing import Callable, Optional
 
-if platform.system() == "Windows":
-    pass
-else:
-    pass
-
 from .colors import ColorScheme
 from .input_handler import InputHandler
 
