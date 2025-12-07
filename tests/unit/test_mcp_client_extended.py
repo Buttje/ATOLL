@@ -1,5 +1,6 @@
 """Extended tests for MCP client."""
 
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -77,13 +78,13 @@ class TestMCPClientExtended:
         # Mock process with timeout
         mock_process = Mock()
         mock_stdout = Mock()
-        mock_stdout.readline = AsyncMock(side_effect=TimeoutError)
+        mock_stdout.readline = AsyncMock(side_effect=asyncio.TimeoutError)
         mock_process.stdout = mock_stdout
         client.process = mock_process
 
-        with patch("asyncio.wait_for", side_effect=TimeoutError):
-            with pytest.raises(TimeoutError):
-                await client._receive_message()
+        # Should return None on timeout (graceful handling)
+        result = await client._receive_message()
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_receive_message_json_error(self):
