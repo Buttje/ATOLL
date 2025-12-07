@@ -32,11 +32,29 @@ class MCPServerConfig:
     env: Dict[str, str] = field(default_factory=dict)
     url: Optional[str] = None
     timeoutSeconds: int = 30
+    cwd: Optional[str] = None  # Working directory for stdio
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MCPServerConfig":
         """Create from dictionary."""
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        result = {"transport": self.transport}
+        if self.command is not None:
+            result["command"] = self.command
+        if self.args:
+            result["args"] = self.args
+        if self.env:
+            result["env"] = self.env
+        if self.url is not None:
+            result["url"] = self.url
+        if self.timeoutSeconds != 30:
+            result["timeoutSeconds"] = self.timeoutSeconds
+        if self.cwd is not None:
+            result["cwd"] = self.cwd
+        return result
 
 
 @dataclass

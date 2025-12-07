@@ -7,6 +7,7 @@ from typing import Optional
 
 from .agent.agent import OllamaMCPAgent
 from .config.manager import ConfigManager
+from .mcp.installer import MCPInstaller
 from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
 from .ui.terminal import TerminalUI, UIMode
@@ -22,6 +23,7 @@ class Application:
         self.colors = ColorScheme()
         self.agent: Optional[OllamaMCPAgent] = None
         self.mcp_manager: Optional[MCPServerManager] = None
+        self.installer: Optional[MCPInstaller] = None
 
     async def startup(self) -> None:
         """Perform startup sequence."""
@@ -44,6 +46,9 @@ class Application:
             mcp_manager=self.mcp_manager,
             ui=self.ui,
         )
+
+        # Create installer
+        self.installer = MCPInstaller(self.ui, self.config_manager, self.agent)
 
         # Check Ollama connectivity
         print(self.colors.info("Checking Ollama server connection..."))
@@ -212,6 +217,9 @@ class Application:
         elif cmd == "tools":
             self.display_tools()
 
+        elif cmd == "install":
+            await self.handle_install_command(parts)
+
         else:
             self.ui.display_error(f"Unknown command: '{cmd}'. Type 'help' for available commands.")
 
@@ -229,6 +237,7 @@ ATOLL - Available Commands:
   clear                   - Clear conversation memory
   servers                 - List connected MCP servers
   tools                   - List available MCP tools
+  install <source>        - Install a new MCP server from various sources
   quit                    - Exit ATOLL
 
 Navigation:
@@ -426,6 +435,48 @@ Examples:
         else:
             print(self.colors.warning("\nNo tools available."))
         print()
+
+    async def handle_install_command(self, parts: list) -> None:
+        """Handle the install command.
+
+        Args:
+            parts: Command parts (install <source> [--name <name>] [--type <type>])
+        """
+        if len(parts) < 2:
+            self.ui.display_error("Usage: install <source> [--name <name>] [--type <type>]")
+            self.ui.display_info("Types: dir (directory), repo (GitHub), url (running server), cmd (command)")
+            self.ui.display_info("Example: install /path/to/server --name my-server --type dir")
+            return
+
+        # Parse arguments
+        source = parts[1]
+        name = None
+        server_type = None
+
+        i = 2
+        while i < len(parts):
+            if parts[i] == "--name" and i + 1 < len(parts):
+                name = parts[i + 1]
+                i += 2
+            elif parts[i] == "--type" and i + 1 < len(parts):
+                server_type = parts[i + 1]
+                i += 2
+            else:
+                i += 1
+
+        # Perform installation
+        success = await self.installer.install_server(source, server_type, name)
+
+        if success:
+            # Reconnect to MCP servers to include the new one
+            self.ui.display_info("Reconnecting to MCP servers...")
+            await self.mcp_manager.disconnect_all()
+            self.config_manager.load_configs()
+            self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
+            await self.mcp_manager.connect_all()
+            # Update agent's MCP manager reference
+            self.agent.mcp_manager = self.mcp_manager
+            self.ui.display_info("✓ Server is now available. Use 'servers' and 'tools' commands to verify.")
 
     async def set_ollama_server(self, url: str, port: Optional[int] = None) -> None:
         """Set Ollama server connection properties."""
