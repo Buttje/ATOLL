@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoll"
-version = "1.0.0"
+version = "1.1.0"
 description = "LangChain-based agent integrating Ollama with MCP servers"
 readme = "README.md"
 requires-python = ">=3.9"
