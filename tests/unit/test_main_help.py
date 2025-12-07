@@ -34,6 +34,61 @@ class TestHelpCommand:
             assert "changemodel" in all_output
             assert "quit" in all_output
 
+    @pytest.mark.asyncio
+    async def test_help_specific_command(self):
+        """Test help <command> displays command-specific help."""
+        app = Application()
+
+        with patch.object(app, "display_command_help") as mock_cmd_help:
+            await app.handle_command("help models")
+            mock_cmd_help.assert_called_once_with("models")
+
+    def test_display_command_help_models(self):
+        """Test display_command_help for models command."""
+        app = Application()
+
+        with patch("builtins.print") as mock_print:
+            app.display_command_help("models")
+            mock_print.assert_called()
+            calls = [str(call_obj) for call_obj in mock_print.call_args_list]
+            all_output = " ".join(calls).lower()
+            assert "models" in all_output
+            assert "usage" in all_output
+
+    def test_display_command_help_changemodel(self):
+        """Test display_command_help for changemodel command."""
+        app = Application()
+
+        with patch("builtins.print") as mock_print:
+            app.display_command_help("changemodel")
+            mock_print.assert_called()
+            calls = [str(call_obj) for call_obj in mock_print.call_args_list]
+            all_output = " ".join(calls).lower()
+            assert "changemodel" in all_output
+            assert "model-name" in all_output
+
+    def test_display_command_help_install(self):
+        """Test display_command_help for install command."""
+        app = Application()
+
+        with patch("builtins.print") as mock_print:
+            app.display_command_help("install")
+            mock_print.assert_called()
+            calls = [str(call_obj) for call_obj in mock_print.call_args_list]
+            all_output = " ".join(calls).lower()
+            assert "install" in all_output
+            assert "source" in all_output
+
+    def test_display_command_help_unknown(self):
+        """Test display_command_help for unknown command."""
+        app = Application()
+        app.ui = Mock()
+
+        app.display_command_help("unknowncommand")
+        app.ui.display_error.assert_called_once()
+        error_msg = app.ui.display_error.call_args[0][0]
+        assert "unknowncommand" in error_msg
+
 
 class TestAdditionalCommands:
     """Tests for additional commands."""

@@ -167,9 +167,12 @@ class Application:
                 elif subcmd == "tool" and len(parts) == 3:
                     tool_name = parts[2]  # Preserve case
                     self.display_tool_help(tool_name)
+                elif len(parts) == 2:
+                    # "help <command>" - display help for specific command
+                    self.display_command_help(subcmd)
                 else:
                     self.ui.display_error(
-                        "Invalid help command. Use 'help', 'help server <name>', or 'help tool <name>'"
+                        "Usage: 'help', 'help <command>', 'help server <name>', or 'help tool <name>'"
                     )
             else:
                 self.display_help()
@@ -262,6 +265,142 @@ Examples:
   > tools
 """
         print(self.colors.info(help_text))
+
+    def display_command_help(self, command: str) -> None:
+        """Display detailed help for a specific command."""
+        command_helps = {
+            "help": """
+Command: help
+Usage: help [command|server <name>|tool <name>]
+
+Display help information about ATOLL commands, MCP servers, or tools.
+
+Examples:
+  help                  - Show all available commands
+  help models           - Show help for the 'models' command
+  help server myserver  - Show details about 'myserver' MCP server
+  help tool mytool      - Show details about 'mytool' tool
+""",
+            "models": """
+Command: models
+Usage: models
+
+List all available Ollama models on the configured server.
+The currently active model is highlighted.
+
+Example:
+  models
+""",
+            "changemodel": """
+Command: changemodel
+Usage: changemodel <model-name>
+
+Switch to a different Ollama model. The change is persisted
+to the configuration file and will be used for all subsequent
+prompts until changed again.
+
+Arguments:
+  <model-name>  - Name of the model (e.g., llama2, mistral, codellama)
+
+Examples:
+  changemodel llama2
+  changemodel mistral:7b-instruct
+""",
+            "setserver": """
+Command: setserver
+Usage: setserver <url> [port]
+
+Configure the Ollama server connection. Updates the base URL
+and optionally the port. The change is persisted to the
+configuration file. ATOLL will verify connectivity and model
+availability before applying the change.
+
+Arguments:
+  <url>   - Base URL of the Ollama server (e.g., http://localhost)
+  [port]  - Optional port number (default: 11434)
+
+Examples:
+  setserver http://localhost 11434
+  setserver http://192.168.1.100
+""",
+            "clear": """
+Command: clear
+Usage: clear
+
+Clear the conversation memory. This removes all previous messages
+from the agent's memory, starting fresh. Useful when you want to
+begin a new conversation context without the agent remembering
+previous interactions.
+
+Aliases: clearmemory
+
+Example:
+  clear
+""",
+            "servers": """
+Command: servers
+Usage: servers
+
+List all connected MCP (Model Context Protocol) servers.
+Shows server names and connection status.
+
+Example:
+  servers
+""",
+            "tools": """
+Command: tools
+Usage: tools
+
+List all available tools from connected MCP servers.
+Tools are functions that the AI agent can invoke to perform
+specific tasks or access external resources.
+
+Example:
+  tools
+""",
+            "install": """
+Command: install
+Usage: install <source> [--name <name>] [--type <type>]
+
+Install a new MCP server from various sources.
+
+Arguments:
+  <source>      - Path, URL, or command for the MCP server
+  --name <name> - Optional custom name for the server
+  --type <type> - Optional source type: dir, repo, url, cmd
+
+Source Types:
+  directory     - Local directory with server implementation
+  repository    - GitHub repository URL (https://github.com/user/repo)
+  url           - HTTP/HTTPS URL of running server
+  command       - Command line to start stdio server
+
+Examples:
+  install /path/to/server
+  install https://github.com/user/mcp-server --name myserver
+  install http://localhost:8080 --type url
+  install "node server.js" --type cmd --name nodejs-server
+""",
+            "quit": """
+Command: quit
+Usage: quit
+
+Exit ATOLL and disconnect from all MCP servers.
+
+Aliases: exit
+
+Example:
+  quit
+""",
+        }
+
+        help_text = command_helps.get(command)
+        if help_text:
+            print(self.colors.info(help_text))
+        else:
+            self.ui.display_error(
+                f"No help available for '{command}'. Use 'help' to see all available commands."
+            )
 
     def display_server_help(self, server_name: str) -> None:
         """Display detailed help for a specific MCP server."""
