@@ -27,6 +27,11 @@ class TestApplication:
                         mock_server_instance = mock_server_manager.return_value
                         mock_server_instance.connect_all = AsyncMock()
                         
+                        # Mock the agent's async methods
+                        mock_agent_instance = mock_agent.return_value
+                        mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
+                        mock_agent_instance.check_model_available = AsyncMock(return_value=True)
+                        
                         await app.startup()
                         
                         assert app.agent is not None

@@ -133,6 +133,24 @@ Think step-by-step and explain your reasoning."""
         self.messages.clear()
         self.ui.display_info("Conversation memory cleared")
 
+    async def check_server_connection(self) -> bool:
+        """Check if Ollama server is reachable."""
+        import aiohttp
+        
+        url = f"{self.ollama_config.base_url}:{self.ollama_config.port}/api/tags"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    return response.status == 200
+        except Exception:
+            return False
+    
+    async def check_model_available(self) -> bool:
+        """Check if the configured model is available."""
+        models = await self.list_models()
+        return self.ollama_config.model in models
+    
     async def list_models(self) -> List[str]:
         """List available Ollama models."""
         import aiohttp
@@ -147,5 +165,4 @@ Think step-by-step and explain your reasoning."""
                     return models
         except Exception as e:
             self.ui.display_error(f"Failed to list models: {e}")
-            return []
             return []

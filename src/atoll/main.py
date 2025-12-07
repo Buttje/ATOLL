@@ -30,10 +30,6 @@ class Application:
         # Load configurations
         self.config_manager.load_configs()
         
-        # Connect to Ollama
-        print(self.colors.info("Connecting to Ollama..."))
-        # Test connection will happen when agent is created
-        
         # Connect to MCP servers
         self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
         await self.mcp_manager.connect_all()
@@ -44,6 +40,23 @@ class Application:
             mcp_manager=self.mcp_manager,
             ui=self.ui,
         )
+        
+        # Check Ollama connectivity
+        print(self.colors.info("Checking Ollama server connection..."))
+        server_reachable = await self.agent.check_server_connection()
+        if server_reachable:
+            print(self.colors.answer_text(f"✓ Ollama server is reachable at {self.config_manager.ollama_config.base_url}:{self.config_manager.ollama_config.port}"))
+            
+            # Check model availability
+            model_available = await self.agent.check_model_available()
+            if model_available:
+                print(self.colors.answer_text(f"✓ Model '{self.config_manager.ollama_config.model}' is available"))
+            else:
+                print(self.colors.warning(f"⚠ Model '{self.config_manager.ollama_config.model}' is not available"))
+                print(self.colors.info("  Use 'models' command to see available models"))
+        else:
+            print(self.colors.error(f"✗ Cannot reach Ollama server at {self.config_manager.ollama_config.base_url}:{self.config_manager.ollama_config.port}"))
+            print(self.colors.info("  Please check if Ollama is running and the configuration is correct"))
         
         print(self.colors.final_response("✓ Startup complete!"))
         print()
@@ -140,6 +153,25 @@ class Application:
         elif cmd == "clear" or cmd == "clearmemory":
             self.agent.clear_memory()
         
+        elif cmd == "setserver":
+            if len(parts) >= 2:
+                # Parse url and port from arguments
+                # Expected format: setserver <url> [port]
+                # e.g., setserver http://localhost 11434
+                url = parts[1]
+                port = None
+                
+                if len(parts) >= 3:
+                    try:
+                        port = int(parts[2])
+                    except ValueError:
+                        self.ui.display_error("Invalid port number. Port must be an integer.")
+                        return
+                
+                await self.set_ollama_server(url, port)
+            else:
+                self.ui.display_error("Usage: setserver <url> [port]")
+        
         elif cmd == "servers":
             self.display_servers()
         
@@ -159,6 +191,7 @@ Available Commands:
   help tool <name>        - Show details about a specific tool
   models                  - List all available Ollama models
   changemodel <name>      - Switch to a different Ollama model
+  setserver <url> [port]  - Configure Ollama server connection
   clear                   - Clear conversation memory
   servers                 - List connected MCP servers
   tools                   - List available MCP tools
@@ -179,6 +212,7 @@ Examples:
   > help server example-server
   > help tool example-tool
   > changemodel llama2
+  > setserver http://localhost 11434
   > models
   > clear
   > tools
@@ -345,6 +379,52 @@ Examples:
         else:
             print(self.colors.warning("\nNo tools available."))
         print()
+    
+    async def set_ollama_server(self, url: str, port: Optional[int] = None) -> None:
+        """Set Ollama server connection properties."""
+        # Update config
+        old_url = self.config_manager.ollama_config.base_url
+        old_port = self.config_manager.ollama_config.port
+        
+        self.config_manager.ollama_config.base_url = url
+        if port is not None:
+            self.config_manager.ollama_config.port = port
+        
+        # Test connection with new settings
+        self.ui.display_info(f"Testing connection to {url}:{self.config_manager.ollama_config.port}...")
+        
+        # Recreate the agent's LLM with new settings
+        self.agent.ollama_config.base_url = url
+        if port is not None:
+            self.agent.ollama_config.port = port
+        self.agent.llm = self.agent._create_llm()
+        
+        # Check if server is reachable
+        server_reachable = await self.agent.check_server_connection()
+        
+        if server_reachable:
+            self.ui.display_info(f"✓ Successfully connected to {url}:{self.config_manager.ollama_config.port}")
+            
+            # Save to config file
+            self.config_manager.save_ollama_config()
+            self.ui.display_info("Configuration saved")
+            
+            # Check model availability
+            model_available = await self.agent.check_model_available()
+            if model_available:
+                self.ui.display_info(f"✓ Model '{self.config_manager.ollama_config.model}' is available")
+            else:
+                self.ui.display_warning(f"⚠ Model '{self.config_manager.ollama_config.model}' is not available on this server")
+        else:
+            # Revert changes
+            self.config_manager.ollama_config.base_url = old_url
+            self.config_manager.ollama_config.port = old_port
+            self.agent.ollama_config.base_url = old_url
+            self.agent.ollama_config.port = old_port
+            self.agent.llm = self.agent._create_llm()
+            
+            self.ui.display_error(f"✗ Failed to connect to {url}:{port if port else self.config_manager.ollama_config.port}")
+            self.ui.display_info("Configuration not saved. Server connection restored to previous settings.")
     
     async def handle_prompt(self, prompt: str) -> None:
         """Handle prompt mode input."""

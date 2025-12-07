@@ -81,6 +81,11 @@ class TestApplicationCoverage:
         """Test startup displays connection messages."""
         app = Application()
         
+        # Properly mock the ollama_config
+        from atoll.config.models import OllamaConfig
+        app.config_manager.ollama_config = OllamaConfig()
+        app.config_manager.mcp_config = Mock(servers={})
+        
         with patch.object(app.config_manager, 'load_configs'):
             with patch('atoll.main.MCPServerManager') as mock_manager_class:
                 mock_manager = Mock()
@@ -88,10 +93,17 @@ class TestApplicationCoverage:
                 mock_manager_class.return_value = mock_manager
                 
                 with patch('atoll.main.OllamaMCPAgent') as mock_agent_class:
+                    # Mock the agent's async methods
+                    mock_agent_instance = Mock()
+                    mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
+                    mock_agent_instance.check_model_available = AsyncMock(return_value=True)
+                    mock_agent_class.return_value = mock_agent_instance
+                    
                     with patch('builtins.print') as mock_print:
                         await app.startup()
                         
                         # Check that startup messages were printed
+                        assert mock_print.call_count > 0
                         assert mock_print.call_count > 0
     
     @pytest.mark.asyncio
