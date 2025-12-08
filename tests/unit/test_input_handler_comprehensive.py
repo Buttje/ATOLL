@@ -1,8 +1,17 @@
 """Comprehensive tests for input handler."""
 
+import platform
 from unittest.mock import patch
 
+import pytest
+
 from atoll.ui.input_handler import InputHandler
+
+# Skip all tests in this module on non-Windows platforms
+pytestmark = pytest.mark.skipif(
+    platform.system() != "Windows",
+    reason="Windows-specific tests require msvcrt module"
+)
 
 
 class TestInputHandlerComprehensive:
