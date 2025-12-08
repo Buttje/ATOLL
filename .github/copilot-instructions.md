@@ -42,6 +42,16 @@ wrapper = MCPToolWrapper(name, description, mcp_manager, server_name)
 - Environment variable expansion in MCP commands: `os.path.expandvars()`
 - Default fallbacks when configs missing (see `OllamaConfig()` and `MCPConfig()`)
 
+### MCP Server Installation
+The `MCPInstaller` provides intelligent, OS-aware installation of MCP servers:
+- **Prerequisite Detection**: Checks for Node.js, npm, pnpm before installation
+- **Auto-Installation**: Guides users to install missing dependencies (Node.js, pnpm)
+- **Platform Scripts**: Detects and prefers platform-specific setup scripts (setup.bat on Windows, setup.sh on Unix)
+- **Complete Sequences**: LLM extracts full installation steps including build commands (e.g., `pnpm install && pnpm run build`)
+- **Container Support**: Auto-detects Docker/Podman with installation prompts
+- **Error Guidance**: Actionable messages when commands fail (missing tools, permissions)
+- Key methods: `_check_nodejs_installed()`, `_install_pnpm()`, `_find_setup_script()`, `_extract_install_command()`
+
 ### Reasoning Engine
 The `ReasoningEngine` applies rule-based analysis before LLM invocation:
 - Detects patterns (e.g., "find implementation" → semantic matching hints)

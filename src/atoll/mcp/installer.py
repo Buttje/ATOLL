@@ -73,6 +73,100 @@ class MCPInstaller:
         """
         return shutil.which(command) is not None
 
+    def _check_nodejs_installed(self) -> bool:
+        """Check if Node.js is installed.
+
+        Returns:
+            True if Node.js is installed, False otherwise
+        """
+        return self._check_command_exists("node")
+
+    def _check_pnpm_installed(self) -> bool:
+        """Check if pnpm is installed.
+
+        Returns:
+            True if pnpm is installed, False otherwise
+        """
+        return self._check_command_exists("pnpm")
+
+    def _check_npm_installed(self) -> bool:
+        """Check if npm is installed.
+
+        Returns:
+            True if npm is installed, False otherwise
+        """
+        return self._check_command_exists("npm")
+
+    async def _install_nodejs(self) -> bool:
+        """Guide user to install Node.js.
+
+        Returns:
+            True if Node.js is now available, False otherwise
+        """
+        self.ui.display_info("Node.js is required for this MCP server")
+        
+        if self.os_type == "Windows":
+            self.ui.display_info("Install Node.js from: https://nodejs.org/en/download/")
+            self.ui.display_info("Or use winget: winget install OpenJS.NodeJS")
+        elif self.os_type == "Linux":
+            self.ui.display_info("Install Node.js using your package manager:")
+            if self._check_command_exists("apt"):
+                self.ui.display_info("  sudo apt update && sudo apt install -y nodejs npm")
+            elif self._check_command_exists("dnf"):
+                self.ui.display_info("  sudo dnf install -y nodejs npm")
+            elif self._check_command_exists("pacman"):
+                self.ui.display_info("  sudo pacman -S nodejs npm")
+        elif self.os_type == "Darwin":
+            if self._check_command_exists("brew"):
+                self.ui.display_info("Install with Homebrew: brew install node")
+            else:
+                self.ui.display_info("Install Node.js from: https://nodejs.org/en/download/")
+        
+        response = input("Press Enter after installation completes, or 'skip' to cancel: ").strip().lower()
+        if response == "skip":
+            return False
+        
+        return self._check_nodejs_installed()
+
+    async def _install_pnpm(self) -> bool:
+        """Install pnpm package manager.
+
+        Returns:
+            True if pnpm is now available, False otherwise
+        """
+        if not self._check_nodejs_installed():
+            self.ui.display_error("Node.js is required to install pnpm")
+            return False
+        
+        self.ui.display_info("Installing pnpm globally...")
+        
+        try:
+            if self._check_npm_installed():
+                # Install pnpm using npm
+                result = subprocess.run(
+                    "npm install -g pnpm",
+                    shell=True,
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode == 0:
+                    self.ui.display_info("pnpm installed successfully")
+                    return self._check_pnpm_installed()
+                else:
+                    self.ui.display_error(f"Failed to install pnpm: {result.stderr}")
+                    return False
+            else:
+                self.ui.display_info("npm not found. Install pnpm manually:")
+                self.ui.display_info("  https://pnpm.io/installation")
+                response = input("Press Enter after installation completes, or 'skip' to cancel: ").strip().lower()
+                if response == "skip":
+                    return False
+                return self._check_pnpm_installed()
+        except Exception as e:
+            self.ui.display_error(f"Failed to install pnpm: {e}")
+            return False
+
     async def _detect_container_runtime(self) -> Optional[str]:
         """Detect available container runtime (Docker or Podman).
 
@@ -499,6 +593,32 @@ class MCPInstaller:
                 return readme
         return None
 
+    def _find_setup_script(self, directory: Path) -> Optional[Path]:
+        """Find platform-specific setup script in directory.
+
+        Args:
+            directory: Directory to search
+
+        Returns:
+            Path to setup script if found, None otherwise
+        """
+        if self.os_type == "Windows":
+            # Check for Windows batch files
+            for script in ["setup.bat", "install.bat", "preinstall.bat"]:
+                script_path = directory / script
+                if script_path.exists():
+                    self.logger.info(f"Found Windows setup script: {script}")
+                    return script_path
+        else:
+            # Check for Unix shell scripts
+            for script in ["setup.sh", "install.sh", "preinstall.sh"]:
+                script_path = directory / script
+                if script_path.exists() and os.access(script_path, os.X_OK):
+                    self.logger.info(f"Found Unix setup script: {script}")
+                    return script_path
+        
+        return None
+
     async def _extract_install_command(self, readme: Path, directory: Path) -> Optional[str]:
         """Extract OS-specific installation command from README using LLM.
 
@@ -510,11 +630,37 @@ class MCPInstaller:
             Installation command string or None
         """
         try:
+            # First, check for platform-specific setup scripts
+            setup_script = self._find_setup_script(directory)
+            if setup_script:
+                self.ui.display_info(f"Found platform setup script: {setup_script.name}")
+                if self.os_type == "Windows":
+                    return str(setup_script)
+                else:
+                    return f"./{setup_script.name}"
+            
             content = readme.read_text(encoding="utf-8", errors="ignore")
             self.logger.info(f"Analyzing README for {self.os_type} installation instructions")
 
+            # Check for Node.js/npm/pnpm requirements
+            requires_nodejs = any(keyword in content.lower() for keyword in ["node", "npm", "pnpm", "yarn", "package.json"])
+            requires_pnpm = "pnpm" in content.lower()
+            
+            if requires_nodejs and not self._check_nodejs_installed():
+                self.ui.display_info("Node.js is required for this server")
+                if not await self._install_nodejs():
+                    self.ui.display_error("Node.js installation cancelled or failed")
+                    return None
+            
+            if requires_pnpm and not self._check_pnpm_installed():
+                self.ui.display_info("pnpm package manager is required")
+                if not await self._install_pnpm():
+                    self.ui.display_error("pnpm installation cancelled or failed")
+                    return None
+
             # Check if Docker/Podman container is an option
             has_docker_option = "docker" in content.lower() or "container" in content.lower()
+            runtime = None
             
             if has_docker_option:
                 runtime = await self._detect_container_runtime()
@@ -533,17 +679,25 @@ class MCPInstaller:
                 "Darwin": "macOS"
             }.get(self.os_type, self.os_type)
 
-            prompt = f"""Analyze this README and extract the installation command(s) for {os_name}:
+            prompt = f"""Analyze this README and extract the COMPLETE installation sequence for {os_name}:
 
 {content}
 
 Host system: {os_name}
 Container runtime available: {runtime if has_docker_option and runtime else "None"}
+Node.js available: {self._check_nodejs_installed()}
+pnpm available: {self._check_pnpm_installed()}
 
-Provide ONLY the shell command needed to install this MCP server on {os_name}.
-If Docker/Podman is available and the README supports it, prefer the container-based installation.
-If multiple commands are needed, separate them with &&.
-Do not include any explanation, just the command.
+Provide ONLY the shell command(s) needed to FULLY install and build this MCP server on {os_name}.
+Important:
+1. Include ALL steps: dependency installation AND build/compilation steps
+2. For Node.js projects: include both 'npm install' (or 'pnpm install') AND 'npm run build' (or 'pnpm run build') if needed
+3. If Docker/Podman is available and the README supports it, prefer the container-based installation
+4. If multiple commands are needed, chain them with && separator
+5. Look for setup scripts (setup.bat, setup.sh) and prefer them if they exist
+6. Do not include starting/running the server, only installation and build steps
+
+Do not include any explanation, just the command(s).
 If no installation is needed, respond with: NONE"""
 
             try:
@@ -719,7 +873,34 @@ Do not include any explanation, just the command.
                 return True
             else:
                 self.ui.display_error(f"Installation failed with code {process.returncode}")
-                self.logger.error(f"Installation failed: {stderr.decode()}")
+                if stderr:
+                    stderr_text = stderr.decode()
+                    self.logger.error(f"Installation failed: {stderr_text}")
+                    
+                    # Provide actionable guidance based on error
+                    if "command not found" in stderr_text.lower() or "not recognized" in stderr_text.lower():
+                        # Extract the missing command
+                        if "pnpm" in stderr_text.lower():
+                            self.ui.display_info("pnpm is not installed. Install it with:")
+                            self.ui.display_info("  npm install -g pnpm")
+                            self.ui.display_info("  Or visit: https://pnpm.io/installation")
+                        elif "npm" in stderr_text.lower():
+                            self.ui.display_info("npm is not installed. Install Node.js from:")
+                            self.ui.display_info("  https://nodejs.org/")
+                        elif "node" in stderr_text.lower():
+                            self.ui.display_info("Node.js is not installed. Install from:")
+                            self.ui.display_info("  https://nodejs.org/")
+                        elif "python" in stderr_text.lower():
+                            self.ui.display_info("Python is not installed. Install from:")
+                            self.ui.display_info("  https://www.python.org/downloads/")
+                        elif "git" in stderr_text.lower():
+                            self.ui.display_info("git is not installed. Install from:")
+                            self.ui.display_info("  https://git-scm.com/downloads")
+                    elif "permission denied" in stderr_text.lower():
+                        self.ui.display_info("Permission denied. Try running with elevated privileges")
+                        if self.os_type != "Windows":
+                            self.ui.display_info("  Or make the script executable: chmod +x <script>")
+                
                 return False
 
         except Exception as e:
