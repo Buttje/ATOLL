@@ -42,49 +42,57 @@ class InputHandler:
             while True:
                 char = self._get_char_windows() if self.is_windows else self._get_char_unix()
 
-                if char == "\x1b":  # ESC key or arrow key start
-                    # Check for arrow keys (ESC [ X on Unix, special handling on Windows)
-                    if not self.is_windows:
-                        next_char = self._get_char_unix()
-                        if next_char == "[":
-                            arrow = self._get_char_unix()
-                            if arrow == "A":  # Up arrow
-                                if history and history_index > 0:
-                                    # Clear current line
-                                    self._clear_line(result, cursor_pos)
-                                    # Move to previous history
-                                    history_index -= 1
-                                    result = list(history[history_index])
-                                    cursor_pos = len(result)
-                                    print("".join(result), end="", flush=True)
-                            elif arrow == "B":  # Down arrow
-                                if history_index < len(history):
-                                    # Clear current line
-                                    self._clear_line(result, cursor_pos)
-                                    # Move to next history
-                                    history_index += 1
-                                    if history_index < len(history):
-                                        result = list(history[history_index])
-                                    else:
-                                        result = []
-                                    cursor_pos = len(result)
-                                    print("".join(result), end="", flush=True)
-                            elif arrow == "C":  # Right arrow
-                                if cursor_pos < len(result):
-                                    cursor_pos += 1
-                                    print("\x1b[C", end="", flush=True)  # Move cursor right
-                            elif arrow == "D":  # Left arrow
-                                if cursor_pos > 0:
-                                    cursor_pos -= 1
-                                    print("\x1b[D", end="", flush=True)  # Move cursor left
-                            continue
+                # Handle escape sequences (from Windows conversion or Unix terminals)
+                if char.startswith("\x1b["):
+                    # Parse the escape sequence
+                    if char == "\x1b[A":  # Up arrow
+                        if history and history_index > 0:
+                            self._clear_line(result, cursor_pos)
+                            history_index -= 1
+                            result = list(history[history_index])
+                            cursor_pos = len(result)
+                            print("".join(result), end="", flush=True)
+                    elif char == "\x1b[B":  # Down arrow
+                        if history_index < len(history):
+                            self._clear_line(result, cursor_pos)
+                            history_index += 1
+                            if history_index < len(history):
+                                result = list(history[history_index])
+                            else:
+                                result = []
+                            cursor_pos = len(result)
+                            print("".join(result), end="", flush=True)
+                    elif char == "\x1b[C":  # Right arrow
+                        if cursor_pos < len(result):
+                            cursor_pos += 1
+                            print("\x1b[C", end="", flush=True)
+                    elif char == "\x1b[D":  # Left arrow
+                        if cursor_pos > 0:
+                            cursor_pos -= 1
+                            print("\x1b[D", end="", flush=True)
+                    elif char == "\x1b[H":  # Home key
+                        if cursor_pos > 0:
+                            print("\r", end="", flush=True)
+                            cursor_pos = 0
+                    elif char == "\x1b[F":  # End key
+                        if cursor_pos < len(result):
+                            moves = len(result) - cursor_pos
+                            print("\x1b[C" * moves, end="", flush=True)
+                            cursor_pos = len(result)
+                    elif char == "\x1b[3~":  # Delete key
+                        if cursor_pos < len(result):
+                            result.pop(cursor_pos)
+                            self._redraw_from_cursor(result, cursor_pos)
+                    # Ignore other escape sequences (Insert, Page Up/Down, etc.)
+                    continue
+                elif char == "\x1b":  # Plain ESC key
                     return "ESC"
                 elif char == "\x16":  # Ctrl+V
                     return "CTRL_V"
                 elif char in ("\r", "\n"):  # Enter key
                     print()  # New line after input
                     return "".join(result)
-                elif char == "\x08" or char == "\x7f":  # Backspace
+                elif char == "\x08" or char == "\x7f":  # Backspace (0x08 on Windows, 0x7f on Unix)
                     if cursor_pos > 0:
                         # Remove character before cursor
                         result.pop(cursor_pos - 1)
@@ -93,10 +101,6 @@ class InputHandler:
                         self._redraw_from_cursor(result, cursor_pos)
                 elif char == "\x03":  # Ctrl+C
                     raise KeyboardInterrupt
-                elif char == "\x7f":  # Delete key (some terminals)
-                    if cursor_pos < len(result):
-                        result.pop(cursor_pos)
-                        self._redraw_from_cursor(result, cursor_pos)
                 else:
                     # Insert character at cursor position
                     result.insert(cursor_pos, char)
@@ -148,20 +152,49 @@ class InputHandler:
                         return "\x1b[C"
                     elif second == b"K":  # Left arrow
                         return "\x1b[D"
-                    # Ignore other special keys
+                    elif second == b"S":  # Delete key
+                        return "\x1b[3~"
+                    elif second == b"R":  # Insert key
+                        return "\x1b[2~"
+                    elif second == b"G":  # Home key
+                        return "\x1b[H"
+                    elif second == b"O":  # End key
+                        return "\x1b[F"
+                    elif second == b"I":  # Page Up
+                        return "\x1b[5~"
+                    elif second == b"Q":  # Page Down
+                        return "\x1b[6~"
+                    # Ignore other special keys (F1-F12, etc.)
                     continue
                 return char.decode("utf-8", errors="ignore")
 
     def _get_char_unix(self) -> str:
-        """Get single character on Unix-like systems."""
+        """Get single character on Unix-like systems, building complete escape sequences."""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
             tty.setraw(sys.stdin.fileno())
             char = sys.stdin.read(1)
+            
+            # If it's an escape sequence, read the rest
+            if char == "\x1b":
+                # Check if there's more input (non-blocking)
+                if select.select([sys.stdin], [], [], 0.01)[0]:
+                    next_char = sys.stdin.read(1)
+                    if next_char == "[":
+                        # Read the sequence character
+                        seq_char = sys.stdin.read(1)
+                        # For sequences ending with ~, read the ~
+                        if seq_char in "2356":
+                            tilde = sys.stdin.read(1)
+                            if tilde == "~":
+                                return f"\x1b[{seq_char}~"
+                        return f"\x1b[{seq_char}"
+                    # Not a complete sequence, return just ESC
+                return char
+            return char
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return char
 
     def check_for_escape(self) -> bool:
         """Check if ESC key was pressed (non-blocking)."""

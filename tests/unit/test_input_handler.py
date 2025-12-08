@@ -87,6 +87,32 @@ class TestInputHandler:
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system")
+    @patch("msvcrt.kbhit")
+    @patch("msvcrt.getch")
+    def test_get_char_windows_special_keys(self, mock_getch, mock_kbhit, mock_system):
+        """Test Delete, Home, End, Insert keys on Windows."""
+        mock_system.return_value = "Windows"
+        handler = InputHandler()
+        mock_kbhit.return_value = True
+
+        # Test Delete key
+        mock_getch.side_effect = [b"\xe0", b"S"]
+        assert handler._get_char_windows() == "\x1b[3~"
+
+        # Test Insert key
+        mock_getch.side_effect = [b"\xe0", b"R"]
+        assert handler._get_char_windows() == "\x1b[2~"
+
+        # Test Home key
+        mock_getch.side_effect = [b"\xe0", b"G"]
+        assert handler._get_char_windows() == "\x1b[H"
+
+        # Test End key
+        mock_getch.side_effect = [b"\xe0", b"O"]
+        assert handler._get_char_windows() == "\x1b[F"
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
+    @patch("platform.system")
     def test_check_for_escape_no_input(self, mock_system):
         """Test checking for escape with no input."""
         mock_system.return_value = "Windows"
