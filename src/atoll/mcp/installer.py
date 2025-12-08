@@ -619,6 +619,49 @@ class MCPInstaller:
         
         return None
 
+    def _clean_command_string(self, command: str) -> str:
+        """Clean command string by removing markdown formatting and extra whitespace.
+        
+        Args:
+            command: Raw command string that may contain markdown formatting
+            
+        Returns:
+            Cleaned command string
+        """
+        if not command:
+            return command
+            
+        # Strip whitespace
+        command = command.strip()
+        
+        # Remove markdown code block formatting
+        # Handle multi-line code blocks (```command```)
+        if command.startswith("```") and command.endswith("```"):
+            command = command[3:-3].strip()
+            # Remove language identifier if present (e.g., ```bash\ncommand```)
+            if "\n" in command:
+                lines = command.split("\n", 1)
+                if lines[0] and not any(c in lines[0] for c in [" ", "&&", "||", "|", ";"]):
+                    command = lines[1].strip()
+        
+        # Iteratively remove wrapping quotes and backticks
+        # Keep stripping until nothing changes
+        prev_command = None
+        while prev_command != command:
+            prev_command = command
+            
+            # Remove inline code formatting (backticks)
+            if command.startswith("`") and command.endswith("`") and len(command) > 1:
+                command = command[1:-1].strip()
+            
+            # Remove quotes if they wrap the entire command
+            for quote in ['"', "'"]:
+                if command.startswith(quote) and command.endswith(quote) and len(command) > 1:
+                    command = command[1:-1].strip()
+                    break
+        
+        return command
+
     async def _extract_install_command(self, readme: Path, directory: Path) -> Optional[str]:
         """Extract OS-specific installation command from README using LLM.
 
@@ -702,7 +745,7 @@ If no installation is needed, respond with: NONE"""
 
             try:
                 response = await self.agent.process_prompt(prompt)
-                command = response.strip()
+                command = self._clean_command_string(response)
 
                 if command == "NONE" or not command:
                     return None
@@ -820,7 +863,7 @@ Do not include any explanation, just the command.
 
             try:
                 response = await self.agent.process_prompt(prompt)
-                command = response.strip()
+                command = self._clean_command_string(response)
 
                 if not command:
                     return None

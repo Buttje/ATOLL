@@ -607,3 +607,45 @@ class TestMCPInstaller:
             # Verify helpful error message was shown
             assert installer.ui.display_info.called
 
+    def test_clean_command_string_with_backticks(self, installer):
+        """Test cleaning command string with backticks."""
+        assert installer._clean_command_string("`pnpm start`") == "pnpm start"
+        assert installer._clean_command_string("`npm run dev`") == "npm run dev"
+
+    def test_clean_command_string_with_code_blocks(self, installer):
+        """Test cleaning command string with code blocks."""
+        assert installer._clean_command_string("```pnpm install```") == "pnpm install"
+        assert installer._clean_command_string("```bash\npnpm install\n```") == "pnpm install"
+        assert installer._clean_command_string("```sh\nnpm start\n```") == "npm start"
+
+    def test_clean_command_string_with_quotes(self, installer):
+        """Test cleaning command string with quotes."""
+        assert installer._clean_command_string('"pnpm start"') == "pnpm start"
+        assert installer._clean_command_string("'npm run dev'") == "npm run dev"
+
+    def test_clean_command_string_preserves_internal_quotes(self, installer):
+        """Test that internal quotes are preserved."""
+        assert installer._clean_command_string('echo "hello world"') == 'echo "hello world"'
+        assert installer._clean_command_string("node -e 'console.log()'") == "node -e 'console.log()'"
+
+    def test_clean_command_string_with_multiple_formats(self, installer):
+        """Test cleaning command string with multiple formatting layers."""
+        assert installer._clean_command_string('"`pnpm start`"') == "pnpm start"
+        assert installer._clean_command_string("```\n`npm install`\n```") == "npm install"
+
+    def test_clean_command_string_with_whitespace(self, installer):
+        """Test cleaning command string with extra whitespace."""
+        assert installer._clean_command_string("  pnpm start  ") == "pnpm start"
+        assert installer._clean_command_string("\n\tpnpm install\n\t") == "pnpm install"
+
+    def test_clean_command_string_empty_or_none(self, installer):
+        """Test cleaning empty or None command strings."""
+        assert installer._clean_command_string("") == ""
+        assert installer._clean_command_string(None) is None
+        assert installer._clean_command_string("   ") == ""
+
+    def test_clean_command_string_complex_commands(self, installer):
+        """Test cleaning complex commands with operators."""
+        assert installer._clean_command_string("`pnpm install && pnpm build`") == "pnpm install && pnpm build"
+        assert installer._clean_command_string("`cd dist && node index.js`") == "cd dist && node index.js"
+
