@@ -218,7 +218,7 @@ class TestMCPInstaller:
         mock_client.disconnect = AsyncMock()
 
         with patch("atoll.mcp.installer.MCPClient", return_value=mock_client):
-            result = await installer._validate_server(config)
+            result = await installer._validate_server("test-server", config)
 
         assert result is True
         mock_client.connect.assert_called_once()
@@ -236,7 +236,7 @@ class TestMCPInstaller:
         mock_client.disconnect = AsyncMock()
 
         with patch("atoll.mcp.installer.MCPClient", return_value=mock_client):
-            result = await installer._validate_server(config)
+            result = await installer._validate_server("test-server", config)
 
         assert result is False
 
@@ -251,7 +251,7 @@ class TestMCPInstaller:
         mock_client.disconnect = AsyncMock()
 
         with patch("atoll.mcp.installer.MCPClient", return_value=mock_client):
-            result = await installer._validate_server(config)
+            result = await installer._validate_server("test-server", config)
 
         assert result is False
 
@@ -398,7 +398,7 @@ class TestMCPInstaller:
         mock_client.connect = AsyncMock(side_effect=Exception("Connection failed"))
 
         with patch("atoll.mcp.installer.MCPClient", return_value=mock_client):
-            result = await installer._validate_server(config)
+            result = await installer._validate_server("test-server", config)
 
         assert result is False
 

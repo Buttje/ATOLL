@@ -467,7 +467,7 @@ class MCPInstaller:
 
         # Validate server
         server_config = await self._create_server_config(name, "stdio", server_command, str(path))
-        if not await self._validate_server(server_config):
+        if not await self._validate_server(name, server_config):
             return False
 
         # Save configuration
@@ -546,7 +546,7 @@ class MCPInstaller:
         server_config = await self._create_server_config(name, transport, "", url)
 
         # Validate server
-        if not await self._validate_server(server_config):
+        if not await self._validate_server(name, server_config):
             return False
 
         # Save configuration
@@ -572,7 +572,7 @@ class MCPInstaller:
         server_config = await self._create_server_config(name, "stdio", command, "")
 
         # Validate server
-        if not await self._validate_server(server_config):
+        if not await self._validate_server(name, server_config):
             return False
 
         # Save configuration
@@ -938,10 +938,11 @@ Do not include any explanation, just the command.
 
         return MCPServerConfig.from_dict(config_dict)
 
-    async def _validate_server(self, server_config: MCPServerConfig) -> bool:
+    async def _validate_server(self, name: str, server_config: MCPServerConfig) -> bool:
         """Validate that an MCP server is functional.
 
         Args:
+            name: Server name for the client
             server_config: Server configuration to validate
 
         Returns:
@@ -952,7 +953,7 @@ Do not include any explanation, just the command.
 
         try:
             # Create a temporary client
-            client = MCPClient(server_config)
+            client = MCPClient(name, server_config)
 
             # Connect
             await client.connect()
