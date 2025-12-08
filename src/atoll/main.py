@@ -47,6 +47,9 @@ class Application:
             ui=self.ui,
         )
 
+        # Command history
+        self.command_history: list[str] = []
+
         # Create installer
         self.installer = MCPInstaller(self.ui, self.config_manager, self.agent)
 
@@ -100,7 +103,7 @@ class Application:
             while self.ui.running:
                 try:
                     # Get user input
-                    user_input = self.ui.get_input()
+                    user_input = self.ui.get_input(history=self.command_history)
 
                     # Check for ESC key
                     if user_input == "ESC":
@@ -111,6 +114,10 @@ class Application:
                     if user_input == "CTRL_V":
                         self.ui.toggle_verbose()
                         continue
+
+                    # Add non-empty commands to history
+                    if user_input.strip():
+                        self.command_history.append(user_input)
 
                     # Handle based on mode
                     if self.ui.mode == UIMode.COMMAND:
@@ -583,7 +590,9 @@ Example:
         """
         if len(parts) < 2:
             self.ui.display_error("Usage: install <source> [--name <name>] [--type <type>]")
-            self.ui.display_info("Types: dir (directory), repo (GitHub), url (running server), cmd (command)")
+            self.ui.display_info(
+                "Types: dir (directory), repo (GitHub), url (running server), cmd (command)"
+            )
             self.ui.display_info("Example: install /path/to/server --name my-server --type dir")
             return
 
@@ -615,7 +624,9 @@ Example:
             await self.mcp_manager.connect_all()
             # Update agent's MCP manager reference
             self.agent.mcp_manager = self.mcp_manager
-            self.ui.display_info("✓ Server is now available. Use 'servers' and 'tools' commands to verify.")
+            self.ui.display_info(
+                "✓ Server is now available. Use 'servers' and 'tools' commands to verify."
+            )
 
     async def set_ollama_server(self, url: str, port: Optional[int] = None) -> None:
         """Set Ollama server connection properties."""

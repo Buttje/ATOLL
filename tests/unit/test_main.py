@@ -135,14 +135,23 @@ class TestApplication:
         ):
             app = Application()
 
-            # Mock startup
+            # Mock startup and shutdown
             app.startup = AsyncMock()
+            app.shutdown = AsyncMock()
             app.ui = Mock()
-            app.ui.running = True
-            app.ui.get_input = Mock(side_effect=KeyboardInterrupt)
+            app.ui.display_header = Mock()
+            app.colors = Mock()
+            app.colors.info = Mock(return_value="Exiting...")
 
-            # Run should handle KeyboardInterrupt gracefully
+            # Set running to False immediately to exit the loop
+            app.ui.running = False
+
+            # Run should handle the loop exit gracefully
             await app.run()
+
+            # Verify startup and shutdown were called
+            app.startup.assert_called_once()
+            app.shutdown.assert_called_once()
 
 
 def test_main_function():

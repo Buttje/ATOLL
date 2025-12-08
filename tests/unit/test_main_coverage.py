@@ -18,25 +18,27 @@ class TestApplicationCoverage:
         app = Application()
 
         with patch.object(app, "startup", new_callable=AsyncMock):
-            with patch.object(app.ui, "display_header"):
-                # Create a counter to limit iterations
-                call_count = [0]
+            with patch.object(app, "shutdown", new_callable=AsyncMock):
+                with patch.object(app.ui, "display_header"):
+                    # Track calls and stop after exception
+                    exception_raised = [False]
 
-                def get_input_side_effect(*args, **kwargs):
-                    call_count[0] += 1
-                    if call_count[0] == 1:
-                        raise Exception("Test error")
-                    else:
+                    def get_input_side_effect(history=None):
+                        if not exception_raised[0]:
+                            exception_raised[0] = True
+                            raise Exception("Test error")
+                        # After exception, stop the loop
                         app.ui.running = False
-                        return "quit"
+                        return ""
 
-                with patch.object(app.ui, "get_input", side_effect=get_input_side_effect):
-                    with patch.object(app.ui, "display_error") as mock_error:
-                        app.ui.running = True
+                    with patch.object(app.ui, "get_input", side_effect=get_input_side_effect):
+                        with patch.object(app.ui, "display_error") as mock_error:
+                            app.ui.running = True
 
-                        await app.run()
+                            await app.run()
 
-                        mock_error.assert_called()
+                            # Verify error was displayed
+                            mock_error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_command_with_spaces(self):
@@ -112,28 +114,29 @@ class TestApplicationCoverage:
         app = Application()
 
         with patch.object(app, "startup", new_callable=AsyncMock):
-            with patch.object(app.ui, "display_header"):
-                # Create a controlled input sequence
-                call_count = [0]
+            with patch.object(app, "shutdown", new_callable=AsyncMock):
+                with patch.object(app.ui, "display_header"):
+                    # Create a controlled input sequence
+                    call_count = [0]
 
-                def get_input_side_effect(*args, **kwargs):
-                    call_count[0] += 1
-                    if call_count[0] == 1:
-                        return "ESC"
-                    else:
-                        # Stop the loop after ESC is handled
-                        app.ui.running = False
-                        return "quit"
+                    def get_input_side_effect(history=None):
+                        call_count[0] += 1
+                        if call_count[0] == 1:
+                            return "ESC"
+                        else:
+                            # Stop the loop after ESC is handled
+                            app.ui.running = False
+                            return "quit"
 
-                with patch.object(app.ui, "get_input", side_effect=get_input_side_effect):
-                    with patch.object(app.ui, "toggle_mode") as mock_toggle:
-                        app.ui.mode = UIMode.COMMAND
-                        app.ui.running = True
+                    with patch.object(app.ui, "get_input", side_effect=get_input_side_effect):
+                        with patch.object(app.ui, "toggle_mode") as mock_toggle:
+                            app.ui.mode = UIMode.COMMAND
+                            app.ui.running = True
 
-                        await app.run()
+                            await app.run()
 
-                        # Verify toggle_mode was called
-                        mock_toggle.assert_called_once()
+                            # Verify toggle_mode was called
+                            mock_toggle.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_command_case_insensitive(self):

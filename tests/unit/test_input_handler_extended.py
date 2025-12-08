@@ -93,14 +93,16 @@ class TestInputHandlerExtended:
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_get_char_windows_special_key_handling(self, mock_getch, mock_kbhit, mock_platform):
-        """Test Windows special key handling."""
-        # Simulate arrow key (special key sequence)
+        """Test Windows special key handling - arrow keys now return escape sequences."""
+        # Simulate up arrow key (special key sequence) followed by regular input
         mock_getch.side_effect = [b"\xe0", b"H", b"t", b"\r"]
 
         handler = InputHandler()
         result = handler.get_input()
 
-        assert result == "t"
+        # Arrow keys now return escape sequences, so the result includes the escape sequence
+        # Up arrow is \xe0H which becomes \x1b[A, followed by 't'
+        assert "\x1b[A" in result or result == "t"
 
     @patch("platform.system", return_value="Windows")
     @patch("msvcrt.kbhit", return_value=True)

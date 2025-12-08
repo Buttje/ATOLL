@@ -129,14 +129,24 @@ class TerminalUI:
             else:
                 print(self.colors.reasoning(text))
 
-    def get_input(self) -> str:
-        """Get user input based on current mode."""
+    def get_input(self, history: list[str] = None) -> str:
+        """Get user input based on current mode.
+
+        Args:
+            history: Command history for up/down arrow navigation
+
+        Returns:
+            User input string
+        """
+        if history is None:
+            history = []
+
         if self.mode == UIMode.PROMPT:
             prompt_text = "\n💬 Enter prompt: "
         else:
             prompt_text = "\n⚙️  Enter command: "
 
-        return self.input_handler.get_input(prompt_text)
+        return self.input_handler.get_input(prompt_text, history=history)
 
     def handle_escape_key(self, callback: Optional[Callable] = None):
         """Handle ESC key press."""

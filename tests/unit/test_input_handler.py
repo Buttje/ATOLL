@@ -47,12 +47,37 @@ class TestInputHandler:
         mock_system.return_value = "Windows"
         handler = InputHandler()
 
-        # Simulate special key (arrow key)
-        mock_kbhit.side_effect = [True, True, True]
-        mock_getch.side_effect = [b"\xe0", b"H", b"a"]  # Arrow up, then 'a'
+        # Simulate special key (arrow up) - now returns escape sequence
+        mock_kbhit.side_effect = [True]
+        mock_getch.side_effect = [b"\xe0", b"H"]  # Arrow up
 
         char = handler._get_char_windows()
-        assert char == "a"
+        assert char == "\x1b[A"  # Now returns ANSI escape sequence for up arrow
+
+    @patch("platform.system")
+    @patch("msvcrt.kbhit")
+    @patch("msvcrt.getch")
+    def test_get_char_windows_arrow_keys(self, mock_getch, mock_kbhit, mock_system):
+        """Test all arrow keys on Windows."""
+        mock_system.return_value = "Windows"
+        handler = InputHandler()
+
+        # Test up arrow
+        mock_kbhit.return_value = True
+        mock_getch.side_effect = [b"\xe0", b"H"]
+        assert handler._get_char_windows() == "\x1b[A"
+
+        # Test down arrow
+        mock_getch.side_effect = [b"\xe0", b"P"]
+        assert handler._get_char_windows() == "\x1b[B"
+
+        # Test right arrow
+        mock_getch.side_effect = [b"\xe0", b"M"]
+        assert handler._get_char_windows() == "\x1b[C"
+
+        # Test left arrow
+        mock_getch.side_effect = [b"\xe0", b"K"]
+        assert handler._get_char_windows() == "\x1b[D"
 
     @patch("platform.system")
     def test_check_for_escape_no_input(self, mock_system):
