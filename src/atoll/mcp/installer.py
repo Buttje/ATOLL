@@ -644,24 +644,28 @@ class MCPInstaller:
             # Remove language identifier if present (e.g., ```bash\ncommand```)
             if "\n" in command:
                 lines = command.split("\n", 1)
-                # First line is likely a language identifier if it's a single word
-                # and doesn't contain command operators
-                if lines[0] and lines[0].isalpha():
+                # Common language identifiers for code blocks
+                lang_identifiers = {
+                    'bash', 'sh', 'shell', 'zsh', 'fish',
+                    'python', 'python3', 'py',
+                    'javascript', 'js', 'node', 'typescript', 'ts',
+                    'powershell', 'ps1', 'cmd', 'batch',
+                    'go', 'rust', 'java', 'c', 'cpp', 'ruby', 'perl'
+                }
+                # If first line is a known language identifier, skip it
+                if len(lines) > 1 and lines[0].lower() in lang_identifiers:
                     command = lines[1].strip()
         
-        # Iteratively remove wrapping quotes and backticks
+        # Iteratively remove wrapping characters (backticks and quotes)
         # Keep stripping until nothing changes
         prev_command = None
+        wrappers = ['`', '"', "'"]
         while prev_command != command:
             prev_command = command
             
-            # Remove inline code formatting (backticks)
-            if command.startswith("`") and command.endswith("`") and len(command) > 1:
-                command = command[1:-1].strip()
-            
-            # Remove quotes if they wrap the entire command
-            for quote in ['"', "'"]:
-                if command.startswith(quote) and command.endswith(quote) and len(command) > 1:
+            # Check each wrapper type
+            for wrapper in wrappers:
+                if command.startswith(wrapper) and command.endswith(wrapper) and len(command) > 1:
                     command = command[1:-1].strip()
                     break
         
