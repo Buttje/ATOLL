@@ -619,6 +619,58 @@ class MCPInstaller:
         
         return None
 
+    def _clean_command_string(self, command: Optional[str]) -> Optional[str]:
+        """Clean command string by removing markdown formatting and extra whitespace.
+        
+        Args:
+            command: Raw command string that may contain markdown formatting, or None
+            
+        Returns:
+            Cleaned command string, or None if input is None
+        """
+        if not command:
+            return command
+            
+        # Strip whitespace
+        command = command.strip()
+        
+        if not command:
+            return command
+        
+        # Remove markdown code block formatting
+        # Handle multi-line code blocks (```command```)
+        if command.startswith("```") and command.endswith("```"):
+            command = command[3:-3].strip()
+            # Remove language identifier if present (e.g., ```bash\ncommand```)
+            if "\n" in command:
+                lines = command.split("\n", 1)
+                # Common language identifiers for code blocks
+                lang_identifiers = {
+                    'bash', 'sh', 'shell', 'zsh', 'fish',
+                    'python', 'python3', 'py',
+                    'javascript', 'js', 'node', 'typescript', 'ts',
+                    'powershell', 'ps1', 'cmd', 'batch',
+                    'go', 'rust', 'java', 'c', 'cpp', 'ruby', 'perl'
+                }
+                # If first line is a known language identifier, skip it
+                if len(lines) > 1 and lines[0].lower() in lang_identifiers:
+                    command = lines[1].strip()
+        
+        # Iteratively remove wrapping characters (backticks and quotes)
+        # Keep stripping until nothing changes
+        prev_command = None
+        wrappers = ['`', '"', "'"]
+        while prev_command != command:
+            prev_command = command
+            
+            # Check each wrapper type
+            for wrapper in wrappers:
+                if command.startswith(wrapper) and command.endswith(wrapper) and len(command) > 1:
+                    command = command[1:-1].strip()
+                    break
+        
+        return command
+
     async def _extract_install_command(self, readme: Path, directory: Path) -> Optional[str]:
         """Extract OS-specific installation command from README using LLM.
 
@@ -702,7 +754,7 @@ If no installation is needed, respond with: NONE"""
 
             try:
                 response = await self.agent.process_prompt(prompt)
-                command = response.strip()
+                command = self._clean_command_string(response)
 
                 if command == "NONE" or not command:
                     return None
@@ -820,7 +872,7 @@ Do not include any explanation, just the command.
 
             try:
                 response = await self.agent.process_prompt(prompt)
-                command = response.strip()
+                command = self._clean_command_string(response)
 
                 if not command:
                     return None
