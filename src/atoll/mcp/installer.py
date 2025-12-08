@@ -619,20 +619,23 @@ class MCPInstaller:
         
         return None
 
-    def _clean_command_string(self, command: str) -> str:
+    def _clean_command_string(self, command: Optional[str]) -> Optional[str]:
         """Clean command string by removing markdown formatting and extra whitespace.
         
         Args:
-            command: Raw command string that may contain markdown formatting
+            command: Raw command string that may contain markdown formatting, or None
             
         Returns:
-            Cleaned command string
+            Cleaned command string, or None if input is None
         """
         if not command:
             return command
             
         # Strip whitespace
         command = command.strip()
+        
+        if not command:
+            return command
         
         # Remove markdown code block formatting
         # Handle multi-line code blocks (```command```)
@@ -641,7 +644,9 @@ class MCPInstaller:
             # Remove language identifier if present (e.g., ```bash\ncommand```)
             if "\n" in command:
                 lines = command.split("\n", 1)
-                if lines[0] and not any(c in lines[0] for c in [" ", "&&", "||", "|", ";"]):
+                # First line is likely a language identifier if it's a single word
+                # and doesn't contain command operators
+                if lines[0] and lines[0].isalpha():
                     command = lines[1].strip()
         
         # Iteratively remove wrapping quotes and backticks
