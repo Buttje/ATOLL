@@ -24,6 +24,7 @@ class Application:
         self.agent: Optional[OllamaMCPAgent] = None
         self.mcp_manager: Optional[MCPServerManager] = None
         self.installer: Optional[MCPInstaller] = None
+        self.command_history: list[str] = []
 
     async def startup(self) -> None:
         """Perform startup sequence."""
@@ -46,9 +47,6 @@ class Application:
             mcp_manager=self.mcp_manager,
             ui=self.ui,
         )
-
-        # Command history
-        self.command_history: list[str] = []
 
         # Create installer
         self.installer = MCPInstaller(self.ui, self.config_manager, self.agent)

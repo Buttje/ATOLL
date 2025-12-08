@@ -1,6 +1,9 @@
 """Unit tests for input handler."""
 
+import platform
 from unittest.mock import patch
+
+import pytest
 
 from atoll.ui.input_handler import InputHandler
 
@@ -24,6 +27,7 @@ class TestInputHandler:
         handler = InputHandler()
         assert handler.is_windows is False
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system")
     @patch("msvcrt.kbhit")
     @patch("msvcrt.getch")
@@ -39,6 +43,7 @@ class TestInputHandler:
         char = handler._get_char_windows()
         assert char == "a"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system")
     @patch("msvcrt.kbhit")
     @patch("msvcrt.getch")
@@ -54,6 +59,7 @@ class TestInputHandler:
         char = handler._get_char_windows()
         assert char == "\x1b[A"  # Now returns ANSI escape sequence for up arrow
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system")
     @patch("msvcrt.kbhit")
     @patch("msvcrt.getch")
@@ -79,6 +85,7 @@ class TestInputHandler:
         mock_getch.side_effect = [b"\xe0", b"K"]
         assert handler._get_char_windows() == "\x1b[D"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system")
     def test_check_for_escape_no_input(self, mock_system):
         """Test checking for escape with no input."""

@@ -1,5 +1,6 @@
 """Extended tests for input handler module."""
 
+import platform
 from unittest.mock import patch
 
 import pytest
@@ -27,6 +28,7 @@ class TestInputHandlerExtended:
         handler = InputHandler()
         assert handler.is_windows is False
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
@@ -39,7 +41,9 @@ class TestInputHandlerExtended:
 
         assert result == "test"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_get_input_escape_key(self, mock_getch, mock_kbhit, mock_platform):
@@ -51,7 +55,9 @@ class TestInputHandlerExtended:
 
         assert result == "ESC"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_get_input_backspace(self, mock_getch, mock_kbhit, mock_platform):
@@ -65,7 +71,9 @@ class TestInputHandlerExtended:
         # After typing "test", backspace removes 't', then add 't' again = "test"
         assert result == "test"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_get_input_ctrl_c(self, mock_getch, mock_kbhit, mock_platform):
@@ -77,7 +85,9 @@ class TestInputHandlerExtended:
         with pytest.raises(KeyboardInterrupt):
             handler.get_input()
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_get_input_with_prompt(self, mock_getch, mock_kbhit, mock_platform):
@@ -89,7 +99,9 @@ class TestInputHandlerExtended:
             handler.get_input("Enter: ")
             mock_print.assert_called()
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_get_char_windows_special_key_handling(self, mock_getch, mock_kbhit, mock_platform):
@@ -104,7 +116,9 @@ class TestInputHandlerExtended:
         # Up arrow is \xe0H which becomes \x1b[A, followed by 't'
         assert "\x1b[A" in result or result == "t"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     def test_backspace_on_empty_input(self, mock_getch, mock_kbhit, mock_platform):
@@ -116,6 +130,7 @@ class TestInputHandlerExtended:
 
         assert result == "t"
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
     @patch("msvcrt.kbhit", return_value=False)
     def test_check_for_escape_no_key_pressed(self, mock_kbhit, mock_platform):
@@ -125,7 +140,9 @@ class TestInputHandlerExtended:
 
         assert result is False
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch", return_value=b"\x1b")
     def test_check_for_escape_esc_pressed(self, mock_getch, mock_kbhit, mock_platform):
@@ -135,8 +152,11 @@ class TestInputHandlerExtended:
 
         assert result is True
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("platform.system", return_value="Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.kbhit", return_value=True)
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
     @patch("msvcrt.getch", return_value=b"t")
     @patch("msvcrt.ungetch")
     def test_check_for_escape_other_key_pressed(
