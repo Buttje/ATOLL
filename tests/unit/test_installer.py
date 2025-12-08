@@ -28,6 +28,9 @@ class TestMCPInstaller:
         """Create mock config manager."""
         manager = Mock()
         manager.mcp_config = MCPConfig()
+        manager.ollama_config = Mock()
+        manager.ollama_config.base_url = "http://localhost"
+        manager.ollama_config.port = 11434
         return manager
 
     @pytest.fixture
@@ -135,6 +138,9 @@ class TestMCPInstaller:
 
         mock_agent.process_prompt.return_value = "npm install"
         installer.agent = mock_agent
+        
+        # Mock the container runtime detection
+        installer._detect_container_runtime = AsyncMock(return_value=None)
 
         command = await installer._extract_install_command(readme, tmp_path)
         assert command == "npm install"

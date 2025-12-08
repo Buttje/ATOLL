@@ -4,11 +4,13 @@ import asyncio
 import json
 import logging
 import os
+import platform
 import re
+import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 from urllib.parse import urlparse
 
 import aiohttp
@@ -33,13 +35,17 @@ class MCPInstaller:
         self.config_manager = config_manager
         self.agent = agent
 
+        # Detect host OS
+        self.os_type = platform.system()  # 'Windows', 'Linux', 'Darwin' (macOS)
+        self.logger = logging.getLogger("mcp_installer")
+        self.logger.info(f"Host OS detected: {self.os_type}")
+
         # Set up logging
         self.log_dir = Path.home() / ".atoll" / "log"
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.log_file = self.log_dir / "mcp_install.log"
 
         # Configure logging
-        self.logger = logging.getLogger("mcp_installer")
         self.logger.setLevel(logging.INFO)
 
         # File handler
@@ -52,6 +58,141 @@ class MCPInstaller:
         # Server installation directory
         self.servers_dir = Path.home() / ".atoll" / "mcp_servers"
         self.servers_dir.mkdir(parents=True, exist_ok=True)
+
+        # Container runtime preference
+        self.container_runtime: Optional[str] = None
+
+    def _check_command_exists(self, command: str) -> bool:
+        """Check if a command exists on the system.
+
+        Args:
+            command: Command name to check
+
+        Returns:
+            True if command exists, False otherwise
+        """
+        return shutil.which(command) is not None
+
+    async def _detect_container_runtime(self) -> Optional[str]:
+        """Detect available container runtime (Docker or Podman).
+
+        Returns:
+            'docker', 'podman', or None
+        """
+        if self.container_runtime:
+            return self.container_runtime
+
+        has_docker = self._check_command_exists("docker")
+        has_podman = self._check_command_exists("podman")
+
+        if has_podman and has_docker:
+            self.ui.display_info("Both Docker and Podman detected")
+            self.ui.display_info("Podman is recommended for better security and rootless operation")
+            response = input("Choose container runtime (docker/podman) [podman]: ").strip().lower()
+            self.container_runtime = "podman" if response in ["", "podman"] else "docker"
+        elif has_podman:
+            self.container_runtime = "podman"
+            self.ui.display_verbose("Using Podman as container runtime")
+        elif has_docker:
+            self.container_runtime = "docker"
+            self.ui.display_verbose("Using Docker as container runtime")
+        else:
+            self.container_runtime = None
+
+        return self.container_runtime
+
+    async def _install_container_runtime(self) -> bool:
+        """Install container runtime (Podman preferred).
+
+        Returns:
+            True if installation succeeded, False otherwise
+        """
+        self.ui.display_info("No container runtime detected (Docker/Podman)")
+        self.ui.display_info("Podman is recommended for better security and rootless operation")
+        response = input("Install container runtime? (yes/no) [yes]: ").strip().lower()
+
+        if response in ["", "yes", "y"]:
+            runtime_choice = input("Choose runtime to install (docker/podman) [podman]: ").strip().lower()
+            runtime = "podman" if runtime_choice in ["", "podman"] else "docker"
+
+            self.ui.display_info(f"Installing {runtime}...")
+            self.logger.info(f"Installing {runtime} on {self.os_type}")
+
+            try:
+                if self.os_type == "Windows":
+                    return await self._install_container_runtime_windows(runtime)
+                elif self.os_type == "Linux":
+                    return await self._install_container_runtime_linux(runtime)
+                elif self.os_type == "Darwin":
+                    return await self._install_container_runtime_macos(runtime)
+                else:
+                    self.ui.display_error(f"Unsupported OS: {self.os_type}")
+                    return False
+            except Exception as e:
+                self.ui.display_error(f"Failed to install {runtime}: {e}")
+                self.logger.error(f"Container runtime installation failed: {e}", exc_info=True)
+                return False
+        else:
+            self.ui.display_info("Container runtime installation cancelled")
+            return False
+
+    async def _install_container_runtime_windows(self, runtime: str) -> bool:
+        """Install container runtime on Windows."""
+        if runtime == "podman":
+            self.ui.display_info("Please install Podman Desktop from: https://podman.io/getting-started/installation")
+            self.ui.display_info("Or use winget: winget install RedHat.Podman-Desktop")
+            response = input("Press Enter after installation completes...")
+            return self._check_command_exists("podman")
+        else:
+            self.ui.display_info("Please install Docker Desktop from: https://www.docker.com/products/docker-desktop")
+            response = input("Press Enter after installation completes...")
+            return self._check_command_exists("docker")
+
+    async def _install_container_runtime_linux(self, runtime: str) -> bool:
+        """Install container runtime on Linux."""
+        if runtime == "podman":
+            self.ui.display_info("Installing Podman via package manager...")
+            # Try different package managers
+            if self._check_command_exists("apt"):
+                cmd = "sudo apt update && sudo apt install -y podman"
+            elif self._check_command_exists("dnf"):
+                cmd = "sudo dnf install -y podman"
+            elif self._check_command_exists("yum"):
+                cmd = "sudo yum install -y podman"
+            elif self._check_command_exists("pacman"):
+                cmd = "sudo pacman -S --noconfirm podman"
+            else:
+                self.ui.display_error("No supported package manager found")
+                return False
+
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            return result.returncode == 0
+        else:
+            self.ui.display_info("Installing Docker...")
+            self.ui.display_info("Please follow instructions at: https://docs.docker.com/engine/install/")
+            response = input("Press Enter after installation completes...")
+            return self._check_command_exists("docker")
+
+    async def _install_container_runtime_macos(self, runtime: str) -> bool:
+        """Install container runtime on macOS."""
+        if runtime == "podman":
+            if self._check_command_exists("brew"):
+                self.ui.display_info("Installing Podman via Homebrew...")
+                result = subprocess.run(
+                    "brew install podman && podman machine init && podman machine start",
+                    shell=True,
+                    capture_output=True,
+                    text=True
+                )
+                return result.returncode == 0
+            else:
+                self.ui.display_info("Please install Podman Desktop from: https://podman.io/getting-started/installation")
+                response = input("Press Enter after installation completes...")
+                return self._check_command_exists("podman")
+        else:
+            self.ui.display_info("Please install Docker Desktop from: https://www.docker.com/products/docker-desktop")
+            response = input("Press Enter after installation completes...")
+            return self._check_command_exists("docker")
 
     async def install_server(
         self,
@@ -359,7 +500,7 @@ class MCPInstaller:
         return None
 
     async def _extract_install_command(self, readme: Path, directory: Path) -> Optional[str]:
-        """Extract installation command from README using LLM.
+        """Extract OS-specific installation command from README using LLM.
 
         Args:
             readme: Path to README file
@@ -370,13 +511,37 @@ class MCPInstaller:
         """
         try:
             content = readme.read_text(encoding="utf-8", errors="ignore")
-            self.logger.info("Analyzing README for installation instructions")
+            self.logger.info(f"Analyzing README for {self.os_type} installation instructions")
 
-            prompt = f"""Analyze this README and extract the installation command(s):
+            # Check if Docker/Podman container is an option
+            has_docker_option = "docker" in content.lower() or "container" in content.lower()
+            
+            if has_docker_option:
+                runtime = await self._detect_container_runtime()
+                if not runtime:
+                    if await self._install_container_runtime():
+                        runtime = await self._detect_container_runtime()
+
+                if runtime:
+                    self.ui.display_info(f"Docker/Podman support detected, using {runtime}")
+                    self.logger.info(f"Using container runtime: {runtime}")
+
+            # Build OS-specific prompt
+            os_name = {
+                "Windows": "Windows",
+                "Linux": "Linux",
+                "Darwin": "macOS"
+            }.get(self.os_type, self.os_type)
+
+            prompt = f"""Analyze this README and extract the installation command(s) for {os_name}:
 
 {content}
 
-Provide ONLY the shell command needed to install this MCP server. 
+Host system: {os_name}
+Container runtime available: {runtime if has_docker_option and runtime else "None"}
+
+Provide ONLY the shell command needed to install this MCP server on {os_name}.
+If Docker/Podman is available and the README supports it, prefer the container-based installation.
 If multiple commands are needed, separate them with &&.
 Do not include any explanation, just the command.
 If no installation is needed, respond with: NONE"""
@@ -387,6 +552,9 @@ If no installation is needed, respond with: NONE"""
 
                 if command == "NONE" or not command:
                     return None
+
+                # Resolve placeholders in the command
+                command = await self._resolve_placeholders(command, directory)
 
                 self.logger.info(f"Extracted install command: {command}")
                 self.ui.display_verbose(f"Installation command: {command}")
@@ -405,8 +573,67 @@ If no installation is needed, respond with: NONE"""
             self.logger.error(f"Failed to extract install command: {e}")
             return None
 
+    async def _resolve_placeholders(self, command: str, directory: Path) -> str:
+        """Resolve placeholders in installation/server commands.
+
+        Args:
+            command: Command with potential placeholders
+            directory: Base directory for relative paths
+
+        Returns:
+            Command with resolved placeholders
+        """
+        self.logger.info("Resolving command placeholders")
+        
+        # Use forward slashes and escape backslashes for regex replacement
+        dir_path = str(directory.absolute()).replace('\\', '/')
+        
+        # Common placeholder patterns
+        placeholders = {
+            r"{ABSOLUTE[_ ]PATH[_ ]TO[_ ]FILE[_ ]HERE}": dir_path,
+            r"{ABSOLUTE[_ ]PATH}": dir_path,
+            r"{PATH[_ ]TO[_ ]SERVER}": dir_path,
+            r"{SERVER[_ ]PATH}": dir_path,
+            r"{INSTALL[_ ]DIR}": dir_path,
+            r"/path/to/(?:server|directory|file|install)": dir_path,
+            r"<path[_ ]to[_ ](?:server|directory|file)>": dir_path,
+        }
+
+        original_command = command
+        for pattern, replacement in placeholders.items():
+            command = re.sub(pattern, replacement, command, flags=re.IGNORECASE)
+
+        # Handle LLM/API endpoint placeholders - use ATOLL's Ollama server
+        if "{LLM" in command.upper() or "{API" in command.upper() or "YOUR_API" in command.upper():
+            ollama_url = f"{self.config_manager.ollama_config.base_url}:{self.config_manager.ollama_config.port}"
+            llm_placeholders = {
+                r"{LLM[_ ](?:SERVER|ENDPOINT|URL)}": ollama_url,
+                r"{API[_ ](?:ENDPOINT|URL|KEY)}": ollama_url,
+                r"YOUR_API_(?:ENDPOINT|URL)": ollama_url,
+                r"<api[_ ]endpoint>": ollama_url,
+            }
+            for pattern, replacement in llm_placeholders.items():
+                command = re.sub(pattern, replacement, command, flags=re.IGNORECASE)
+
+        # If command changed, inform user
+        if command != original_command:
+            self.ui.display_verbose(f"Resolved placeholders in command")
+            self.logger.info(f"Command before: {original_command}")
+            self.logger.info(f"Command after: {command}")
+
+        # Check for remaining unresolved placeholders
+        remaining_placeholders = re.findall(r'{[^}]+}|<[^>]+>|\$\{[^}]+\}', command)
+        if remaining_placeholders:
+            self.ui.display_info(f"Command contains placeholders: {', '.join(remaining_placeholders)}")
+            self.ui.display_info(f"Current command: {command}")
+            response = input("Please provide the complete command or press Enter to use as-is: ").strip()
+            if response:
+                command = response
+
+        return command
+
     async def _find_server_command(self, readme: Path, directory: Path) -> Optional[str]:
-        """Extract server start command from README using LLM.
+        """Extract OS-specific server start command from README using LLM.
 
         Args:
             readme: Path to README file
@@ -417,13 +644,22 @@ If no installation is needed, respond with: NONE"""
         """
         try:
             content = readme.read_text(encoding="utf-8", errors="ignore")
-            self.logger.info("Analyzing README for server start command")
+            self.logger.info(f"Analyzing README for {self.os_type} server start command")
 
-            prompt = f"""Analyze this README and extract the command to START the MCP server:
+            # Build OS-specific prompt
+            os_name = {
+                "Windows": "Windows",
+                "Linux": "Linux",
+                "Darwin": "macOS"
+            }.get(self.os_type, self.os_type)
+
+            prompt = f"""Analyze this README and extract the command to START the MCP server on {os_name}:
 
 {content}
 
-Provide ONLY the shell command needed to start/run this MCP server.
+Host system: {os_name}
+
+Provide ONLY the shell command needed to start/run this MCP server on {os_name}.
 Do not include installation commands, just the command to run the server.
 Do not include any explanation, just the command.
 """
@@ -434,6 +670,9 @@ Do not include any explanation, just the command.
 
                 if not command:
                     return None
+
+                # Resolve placeholders in the command
+                command = await self._resolve_placeholders(command, directory)
 
                 self.logger.info(f"Extracted server command: {command}")
                 self.ui.display_verbose(f"Server command: {command}")
