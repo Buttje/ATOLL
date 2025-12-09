@@ -1,13 +1,13 @@
 """Unit tests for MCP installer."""
 
-import asyncio
 import json
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock, patch
 
-from atoll.mcp.installer import MCPInstaller
+import pytest
+
 from atoll.config.models import MCPConfig, MCPServerConfig
+from atoll.mcp.installer import MCPInstaller
 from atoll.ui.terminal import TerminalUI
 
 
@@ -138,12 +138,14 @@ class TestMCPInstaller:
 
         mock_agent.process_prompt.return_value = "npm install"
         installer.agent = mock_agent
-        
+
         # Mock prerequisite checks
         with patch.object(installer, "_check_nodejs_installed", return_value=True):
             with patch.object(installer, "_check_pnpm_installed", return_value=True):
                 with patch.object(installer, "_detect_container_runtime", return_value=None):
-                    with patch.object(installer, "_resolve_placeholders", return_value="npm install"):
+                    with patch.object(
+                        installer, "_resolve_placeholders", return_value="npm install"
+                    ):
                         command = await installer._extract_install_command(readme, tmp_path)
                         assert command == "npm install"
                         mock_agent.process_prompt.assert_called_once()
@@ -199,9 +201,7 @@ class TestMCPInstaller:
     @pytest.mark.asyncio
     async def test_create_server_config_http(self, installer):
         """Test creating server config for HTTP."""
-        config = await installer._create_server_config(
-            "test", "http", "", "http://localhost:8080"
-        )
+        config = await installer._create_server_config("test", "http", "", "http://localhost:8080")
         assert config.transport == "http"
         assert config.url == "http://localhost:8080"
 
@@ -261,7 +261,7 @@ class TestMCPInstaller:
         config_dir = tmp_path / ".atoll"
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-        config = MCPServerConfig(transport="stdio", command="python", args=["server.py"])
+        config = MCPServerConfig(type="stdio", command="python", args=["server.py"])
         result = installer._save_server_config("test-server", config)
 
         assert result is True
@@ -273,7 +273,7 @@ class TestMCPInstaller:
             saved = json.load(f)
         assert "servers" in saved
         assert "test-server" in saved["servers"]
-        assert saved["servers"]["test-server"]["transport"] == "stdio"
+        assert saved["servers"]["test-server"]["type"] == "stdio"
 
     @pytest.mark.asyncio
     async def test_install_from_directory_no_directory(self, installer):
@@ -331,7 +331,9 @@ class TestMCPInstaller:
     async def test_install_from_repository_git_not_found(self, installer):
         """Test repository installation when git is not available."""
         with patch("subprocess.run", side_effect=FileNotFoundError()):
-            result = await installer._install_from_repository("https://github.com/user/repo", "test")
+            result = await installer._install_from_repository(
+                "https://github.com/user/repo", "test"
+            )
             assert result is False
             installer.ui.display_error.assert_called()
 
@@ -344,7 +346,9 @@ class TestMCPInstaller:
             "subprocess.run",
             side_effect=subprocess.CalledProcessError(1, "git", stderr="clone failed"),
         ):
-            result = await installer._install_from_repository("https://github.com/user/repo", "test")
+            result = await installer._install_from_repository(
+                "https://github.com/user/repo", "test"
+            )
             assert result is False
             installer.ui.display_error.assert_called()
 
@@ -586,7 +590,11 @@ class TestMCPInstaller:
         with patch.object(installer, "_check_nodejs_installed", return_value=True):
             with patch.object(installer, "_check_pnpm_installed", return_value=True):
                 with patch.object(installer, "_detect_container_runtime", return_value=None):
-                    with patch.object(installer, "_resolve_placeholders", return_value="pnpm install && pnpm run build"):
+                    with patch.object(
+                        installer,
+                        "_resolve_placeholders",
+                        return_value="pnpm install && pnpm run build",
+                    ):
                         result = await installer._extract_install_command(readme, test_dir)
                         assert result == "pnpm install && pnpm run build"
 
@@ -599,7 +607,10 @@ class TestMCPInstaller:
         with patch("asyncio.create_subprocess_shell") as mock_process:
             mock_proc = AsyncMock()
             mock_proc.returncode = 1
-            mock_proc.communicate.return_value = (b"", b"'pnpm' is not recognized as an internal or external command")
+            mock_proc.communicate.return_value = (
+                b"",
+                b"'pnpm' is not recognized as an internal or external command",
+            )
             mock_process.return_value = mock_proc
 
             result = await installer._execute_install_command("pnpm install", test_dir)
@@ -626,7 +637,9 @@ class TestMCPInstaller:
     def test_clean_command_string_preserves_internal_quotes(self, installer):
         """Test that internal quotes are preserved."""
         assert installer._clean_command_string('echo "hello world"') == 'echo "hello world"'
-        assert installer._clean_command_string("node -e 'console.log()'") == "node -e 'console.log()'"
+        assert (
+            installer._clean_command_string("node -e 'console.log()'") == "node -e 'console.log()'"
+        )
 
     def test_clean_command_string_with_multiple_formats(self, installer):
         """Test cleaning command string with multiple formatting layers."""
@@ -646,6 +659,11 @@ class TestMCPInstaller:
 
     def test_clean_command_string_complex_commands(self, installer):
         """Test cleaning complex commands with operators."""
-        assert installer._clean_command_string("`pnpm install && pnpm build`") == "pnpm install && pnpm build"
-        assert installer._clean_command_string("`cd dist && node index.js`") == "cd dist && node index.js"
-
+        assert (
+            installer._clean_command_string("`pnpm install && pnpm build`")
+            == "pnpm install && pnpm build"
+        )
+        assert (
+            installer._clean_command_string("`cd dist && node index.js`")
+            == "cd dist && node index.js"
+        )

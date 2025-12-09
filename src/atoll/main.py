@@ -7,7 +7,6 @@ from typing import Optional
 
 from .agent.agent import OllamaMCPAgent
 from .config.manager import ConfigManager
-from .mcp.installer import MCPInstaller
 from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
 from .ui.terminal import TerminalUI, UIMode
@@ -23,7 +22,6 @@ class Application:
         self.colors = ColorScheme()
         self.agent: Optional[OllamaMCPAgent] = None
         self.mcp_manager: Optional[MCPServerManager] = None
-        self.installer: Optional[MCPInstaller] = None
         self.command_history: list[str] = []
 
     async def startup(self) -> None:
@@ -47,9 +45,6 @@ class Application:
             mcp_manager=self.mcp_manager,
             ui=self.ui,
         )
-
-        # Create installer
-        self.installer = MCPInstaller(self.ui, self.config_manager, self.agent)
 
         # Check Ollama connectivity
         print(self.colors.info("Checking Ollama server connection..."))
@@ -91,10 +86,41 @@ class Application:
         print(self.colors.final_response("✓ Startup complete!"))
         print()
 
+        # Wait for user confirmation to continue
+        return await self._wait_for_startup_confirmation()
+
+    async def _wait_for_startup_confirmation(self) -> bool:
+        """Wait for user to press Enter to continue or Escape to exit.
+
+        Returns:
+            True if user wants to continue, False if user wants to exit
+        """
+        print(self.colors.info("Press [Enter] to continue or [Escape] to exit..."))
+
+        # Use the input handler to get a key press
+        from .ui.input_handler import InputHandler
+
+        handler = InputHandler()
+
+        while True:
+            char = handler._get_char_windows() if handler.is_windows else handler._get_char_unix()
+
+            if char in ("\r", "\n"):  # Enter key
+                print()
+                return True
+            elif char == "\x1b":  # Escape key
+                print()
+                return False
+
     async def run(self) -> None:
         """Run the main application loop."""
         try:
-            await self.startup()
+            # Run startup and check if user wants to continue
+            should_continue = await self.startup()
+
+            if not should_continue:
+                print(self.colors.info("Exiting before starting main loop..."))
+                return
 
             self.ui.display_header()
 
@@ -225,9 +251,6 @@ class Application:
         elif cmd == "tools":
             self.display_tools()
 
-        elif cmd == "install":
-            await self.handle_install_command(parts)
-
         else:
             self.ui.display_error(f"Unknown command: '{cmd}'. Type 'help' for available commands.")
 
@@ -245,7 +268,6 @@ ATOLL - Available Commands:
   clear                   - Clear conversation memory
   servers                 - List connected MCP servers
   tools                   - List available MCP tools
-  install <source>        - Install a new MCP server from various sources
   quit                    - Exit ATOLL
 
 Navigation:
@@ -362,29 +384,6 @@ specific tasks or access external resources.
 
 Example:
   tools
-""",
-            "install": """
-Command: install
-Usage: install <source> [--name <name>] [--type <type>]
-
-Install a new MCP server from various sources.
-
-Arguments:
-  <source>      - Path, URL, or command for the MCP server
-  --name <name> - Optional custom name for the server
-  --type <type> - Optional source type: dir, repo, url, cmd
-
-Source Types:
-  directory     - Local directory with server implementation
-  repository    - GitHub repository URL (https://github.com/user/repo)
-  url           - HTTP/HTTPS URL of running server
-  command       - Command line to start stdio server
-
-Examples:
-  install /path/to/server
-  install https://github.com/user/mcp-server --name myserver
-  install http://localhost:8080 --type url
-  install "node server.js" --type cmd --name nodejs-server
 """,
             "quit": """
 Command: quit
@@ -579,52 +578,6 @@ Example:
         else:
             print(self.colors.warning("\nNo tools available."))
         print()
-
-    async def handle_install_command(self, parts: list) -> None:
-        """Handle the install command.
-
-        Args:
-            parts: Command parts (install <source> [--name <name>] [--type <type>])
-        """
-        if len(parts) < 2:
-            self.ui.display_error("Usage: install <source> [--name <name>] [--type <type>]")
-            self.ui.display_info(
-                "Types: dir (directory), repo (GitHub), url (running server), cmd (command)"
-            )
-            self.ui.display_info("Example: install /path/to/server --name my-server --type dir")
-            return
-
-        # Parse arguments
-        source = parts[1]
-        name = None
-        server_type = None
-
-        i = 2
-        while i < len(parts):
-            if parts[i] == "--name" and i + 1 < len(parts):
-                name = parts[i + 1]
-                i += 2
-            elif parts[i] == "--type" and i + 1 < len(parts):
-                server_type = parts[i + 1]
-                i += 2
-            else:
-                i += 1
-
-        # Perform installation
-        success = await self.installer.install_server(source, server_type, name)
-
-        if success:
-            # Reconnect to MCP servers to include the new one
-            self.ui.display_info("Reconnecting to MCP servers...")
-            await self.mcp_manager.disconnect_all()
-            self.config_manager.load_configs()
-            self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
-            await self.mcp_manager.connect_all()
-            # Update agent's MCP manager reference
-            self.agent.mcp_manager = self.mcp_manager
-            self.ui.display_info(
-                "✓ Server is now available. Use 'servers' and 'tools' commands to verify."
-            )
 
     async def set_ollama_server(self, url: str, port: Optional[int] = None) -> None:
         """Set Ollama server connection properties."""

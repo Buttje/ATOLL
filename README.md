@@ -164,29 +164,47 @@ Create this file in your home directory under `.ollama_server/`:
 
 > **Note**: Make sure Ollama is running with `ollama serve` and you have pulled the desired model with `ollama pull llama2`
 
-#### 2. MCP Configuration (`.mcpConfig.json`)
+#### 2. MCP Configuration (`mcp.json`)
 
-Create this file to configure MCP servers:
+Create this file to configure MCP servers following the [MCP Config Schema](https://json.schemastore.org/mcp-config-0.1.0.json):
 
 ```json
 {
   "servers": {
-    "example_http": {
-      "transport": "streamable_http",
-      "url": "http://localhost:8080",
+    "my-stdio-server": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["path/to/server.py"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "API_KEY": "your-key-here"
+      }
+    },
+    "my-http-server": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
       "headers": {
         "Authorization": "Bearer token"
-      },
-      "timeoutSeconds": 30
+      }
+    },
+    "my-sse-server": {
+      "type": "sse",
+      "url": "http://localhost:8080/events"
     }
   }
 }
 ```
 
-**Transport Types:**
-- `stdio`: Standard input/output communication (for local scripts)
-- `streamable_http`: HTTP-based communication
+**Server Types:**
+- `stdio`: Standard input/output communication (for local scripts/executables)
+  - Required: `command`
+  - Optional: `args`, `env`, `cwd`, `envFile`
+- `http`: HTTP-based communication
+  - Required: `url`
+  - Optional: `headers`
 - `sse`: Server-Sent Events for streaming
+  - Required: `url`
+  - Optional: `headers`
 
 > **Tip**: Start with an empty `servers` object if you don't have MCP servers configured yet
 
@@ -667,7 +685,7 @@ A: Yes! ATOLL is MIT licensed. Check individual model licenses for commercial us
 ### Technical Questions
 
 **Q: How do I add custom tools?**
-A: Create an MCP server that implements your tools, then configure it in `.mcpConfig.json`. See the [MCP Integration Guide](docs/guides/mcp_integration.md).
+A: Create an MCP server that implements your tools, then configure it in `mcp.json`. See the [MCP Integration Guide](docs/guides/mcp_integration.md).
 
 **Q: Can I use multiple models simultaneously?**
 A: Currently, one model at a time, but you can switch models without restarting using the `ChangeModel` command.

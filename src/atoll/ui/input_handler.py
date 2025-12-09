@@ -126,14 +126,14 @@ class InputHandler:
 
     def _redraw_from_cursor(self, result: list[str], cursor_pos: int) -> None:
         """Redraw line from cursor position."""
-        # Save cursor position
         remaining = "".join(result[cursor_pos:])
-        # Print remaining characters
+        # Print remaining characters plus a space to clear any deleted character
         print(remaining + " ", end="", flush=True)
-        # Move cursor back to correct position
+        # Move cursor back to correct position using ANSI escape codes
         moves_back = len(remaining) + 1
         if moves_back > 0:
-            print("\b" * moves_back, end="", flush=True)
+            # Use ANSI escape sequence for moving left instead of backspace
+            print(f"\x1b[{moves_back}D", end="", flush=True)
 
     def _get_char_windows(self) -> str:
         """Get single character on Windows."""
@@ -175,7 +175,7 @@ class InputHandler:
         try:
             tty.setraw(sys.stdin.fileno())
             char = sys.stdin.read(1)
-            
+
             # If it's an escape sequence, read the rest
             if char == "\x1b":
                 # Check if there's more input (non-blocking)

@@ -46,7 +46,7 @@ class TestGracefulShutdown:
         """Test run calls shutdown when exiting."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock):
+        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
             with patch.object(app, "shutdown", new_callable=AsyncMock) as mock_shutdown:
                 with patch.object(app.ui, "display_header"):
                     # Make get_input return 'quit' once, then stop the loop
@@ -68,7 +68,7 @@ class TestGracefulShutdown:
         """Test run calls shutdown on KeyboardInterrupt."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock):
+        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
             with patch.object(app, "shutdown", new_callable=AsyncMock) as mock_shutdown:
                 with patch.object(app.ui, "display_header"):
                     with patch.object(app.ui, "get_input", side_effect=KeyboardInterrupt):

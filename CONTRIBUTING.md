@@ -158,7 +158,7 @@ dev =
     ruff>=0.1.0
     mypy>=1.7.0
     pre-commit>=3.5.0
-    
+
 test =
     pytest>=7.4.0
     pytest-asyncio>=0.21.0
@@ -174,7 +174,7 @@ asyncio_mode = auto
 
 [coverage:run]
 source = src
-omit = 
+omit =
     */tests/*
     */__init__.py
 
@@ -228,7 +228,7 @@ Cross-platform terminal interface:
 
 ### Adding New MCP Servers
 1. Create server implementation following MCP protocol
-2. Add server configuration to `.mcpConfig.json`
+2. Add server configuration to `mcp.json`
 3. Tools automatically discovered on startup
 
 ### Custom Tools
@@ -343,10 +343,10 @@ import sys
 class MCPServer:
     def handle_request(self, request):
         method = request.get("method")
-        
+
         if method == "initialize":
             return {"capabilities": {}}
-        
+
         elif method == "tools/list":
             return {
                 "tools": [
@@ -362,11 +362,11 @@ class MCPServer:
                     }
                 ]
             }
-        
+
         elif method == "tools/call":
             tool_name = request["params"]["name"]
             arguments = request["params"]["arguments"]
-            
+
             if tool_name == "example_tool":
                 return {"result": f"Processed: {arguments['input']}"}
 

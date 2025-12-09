@@ -145,7 +145,7 @@ desktop.ini
 
 # ATOLL-specific configuration files (local only)
 .ollamaConfig.json
-.mcpConfig.json
+mcp.json
 
 # Logs
 logs/

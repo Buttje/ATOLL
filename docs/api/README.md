@@ -69,15 +69,25 @@ Create `~/.ollama_server/.ollama_config.json`:
 ```
 
 ### MCP Configuration
-Create `.mcpConfig.json`:
+Create `mcp.json` following the [MCP Config Schema](https://json.schemastore.org/mcp-config-0.1.0.json):
 ```json
 {
   "servers": {
-    "example": {
-      "transport": "stdio",
+    "my-server": {
+      "type": "stdio",
       "command": "python",
       "args": ["path/to/server.py"],
-      "timeoutSeconds": 30
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "API_KEY": "your-key"
+      }
+    },
+    "http-server": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "Authorization": "Bearer token"
+      }
     }
   }
 }

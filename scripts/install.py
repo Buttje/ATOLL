@@ -1,10 +1,39 @@
 """Installation script for ATOLL."""
 
+import json
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+
+def create_default_configs():
+    """Create default configuration files if they don't exist."""
+    # Create ~/.atoll directory and mcp.json if they don't exist
+    atoll_config_dir = Path.home() / ".atoll"
+    atoll_config_dir.mkdir(parents=True, exist_ok=True)
+
+    mcp_config_path = atoll_config_dir / "mcp.json"
+    if not mcp_config_path.exists():
+        default_mcp_config = {"servers": {}}
+        try:
+            with open(mcp_config_path, "w") as f:
+                json.dump(default_mcp_config, f, indent=2)
+            print(f"[OK] Created default mcp.json at {mcp_config_path}")
+        except Exception as e:
+            print(f"[WARN] Could not create mcp.json: {e}")
+    else:
+        print(f"[OK] mcp.json already exists at {mcp_config_path}")
+
+    # Check if .ollama_config.json exists in ~/.ollama_server/
+    ollama_config_dir = Path.home() / ".ollama_server"
+    ollama_config_path = ollama_config_dir / ".ollama_config.json"
+
+    if ollama_config_path.exists():
+        print("[OK] .ollama_config.json already exists (leaving untouched)")
+    else:
+        print("[INFO] .ollama_config.json does not exist (will be created on first run)")
 
 
 def run_command(cmd, description, ignore_errors=False):
@@ -15,11 +44,11 @@ def run_command(cmd, description, ignore_errors=False):
         if result.returncode != 0 and not ignore_errors:
             # Check if it's just a pip notice
             if "notice" in result.stderr.lower() and "pip" in result.stderr.lower():
-                print(f"✓ {description} completed (with pip update notice)")
+                print(f"[OK] {description} completed (with pip update notice)")
                 return True
             print(f"Error: {result.stderr}")
             return False
-        print(f"✓ {description} completed")
+        print(f"[OK] {description} completed")
         return True
     except Exception as e:
         print(f"Error: {e}")
@@ -39,6 +68,10 @@ def main():
 
     print(f"Python {sys.version}")
 
+    # Create default configuration files
+    print("\nChecking configuration files...")
+    create_default_configs()
+
     # Check if venv already exists and is functional
     venv_path = Path("venv")
     venv_valid = False
@@ -54,9 +87,9 @@ def main():
 
         if python_exe.exists() and pip_exe.exists():
             venv_valid = True
-            print("✓ Virtual environment already exists")
+            print("[OK] Virtual environment already exists")
         else:
-            print("⚠ Virtual environment exists but is incomplete, recreating...")
+            print("[WARN] Virtual environment exists but is incomplete, recreating...")
             # Remove incomplete venv
             shutil.rmtree(venv_path)
 
@@ -87,7 +120,7 @@ def main():
     run_command(pre_commit_cmd, "Installing pre-commit hooks", ignore_errors=True)
 
     print("\n" + "=" * 60)
-    print("✓ Installation complete!")
+    print("[OK] Installation complete!")
     print("\nTo activate the environment:")
     if os.name == "nt":
         print("  venv\\Scripts\\activate")

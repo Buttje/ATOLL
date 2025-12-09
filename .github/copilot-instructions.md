@@ -7,7 +7,7 @@ ATOLL is a LangChain-based AI agent that bridges Ollama LLMs with MCP (Model Con
 - **Application Layer** (`main.py`): Orchestrates startup, manages dual-mode UI (Command/Prompt), handles user interaction loop
 - **Agent Layer** (`agent/`): LangChain integration, reasoning engine, tool wrappers for MCP
 - **MCP Layer** (`mcp/`): Server manager, clients (stdio/SSE/HTTP), tool registry for cross-server tool discovery
-- **Configuration** (`config/`): Pydantic dataclasses for type-safe configs (`~/.ollama_server/.ollama_config.json`, `.mcpConfig.json`)
+- **Configuration** (`config/`): Pydantic dataclasses for type-safe configs (`~/.ollama_server/.ollama_config.json`, `mcp.json`)
 - **UI Layer** (`ui/`): Terminal interface with mode toggling (ESC key), color schemes, input handling
 
 **Key Data Flow**: User input → TerminalUI → Application.handle_prompt/command → OllamaMCPAgent → MCPServerManager → MCPClient (stdio subprocess) → Tool execution → Response formatting → Display
@@ -35,22 +35,12 @@ wrapper = MCPToolWrapper(name, description, mcp_manager, server_name)
 
 ### Configuration Management
 - Ollama config stored in `~/.ollama_server/.ollama_config.json` (user home directory)
-- MCP config in working directory (`.mcpConfig.json`)
+- MCP config in working directory (`mcp.json`)
 - `ConfigManager` uses `Path` for file handling, validates with Pydantic dataclasses
 - Directory `~/.ollama_server/` created automatically on first run
 - Configuration changes via commands (`changemodel`, `setserver`) are persisted to disk automatically
 - Environment variable expansion in MCP commands: `os.path.expandvars()`
 - Default fallbacks when configs missing (see `OllamaConfig()` and `MCPConfig()`)
-
-### MCP Server Installation
-The `MCPInstaller` provides intelligent, OS-aware installation of MCP servers:
-- **Prerequisite Detection**: Checks for Node.js, npm, pnpm before installation
-- **Auto-Installation**: Guides users to install missing dependencies (Node.js, pnpm)
-- **Platform Scripts**: Detects and prefers platform-specific setup scripts (setup.bat on Windows, setup.sh on Unix)
-- **Complete Sequences**: LLM extracts full installation steps including build commands (e.g., `pnpm install && pnpm run build`)
-- **Container Support**: Auto-detects Docker/Podman with installation prompts
-- **Error Guidance**: Actionable messages when commands fail (missing tools, permissions)
-- Key methods: `_check_nodejs_installed()`, `_install_pnpm()`, `_find_setup_script()`, `_extract_install_command()`
 
 ### Reasoning Engine
 The `ReasoningEngine` applies rule-based analysis before LLM invocation:
@@ -81,10 +71,11 @@ pytest-watch
 Run all checks: `pre-commit run --all-files`
 
 ### Adding New MCP Servers
-1. Update `.mcpConfig.json` with server config (transport: stdio/sse/http)
-2. Server auto-discovered on startup via `MCPServerManager.connect_all()`
-3. Tools registered in `ToolRegistry` (handles naming conflicts by server priority)
-4. Test with `help server <name>` and `help tool <name>` commands
+1. Update `mcp.json` with server config (transport: stdio/sse/http)
+2. Manually install the MCP server using its installation script or package manager
+3. Server auto-discovered on startup via `MCPServerManager.connect_all()`
+4. Tools registered in `ToolRegistry` (handles naming conflicts by server priority)
+5. Test with `help server <name>` and `help tool <name>` commands
 
 ### Hot Model Switching
 Use `changemodel <name>` command (no restart required):
@@ -154,5 +145,5 @@ except json.JSONDecodeError:
 ## Performance Requirements
 
 - Local LLM responses: <2s target (depends on model/hardware)
-- MCP server timeout: 30s default (configurable in `.mcpConfig.json`)
+- MCP server timeout: 30s default (configurable in `mcp.json`)
 - Tool execution varies by MCP server implementation

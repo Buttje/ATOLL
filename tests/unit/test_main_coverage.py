@@ -17,7 +17,7 @@ class TestApplicationCoverage:
         """Test run method with exception handling."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock):
+        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
             with patch.object(app, "shutdown", new_callable=AsyncMock):
                 with patch.object(app.ui, "display_header"):
                     # Track calls and stop after exception
@@ -102,18 +102,27 @@ class TestApplicationCoverage:
                     mock_agent_instance.check_model_available = AsyncMock(return_value=True)
                     mock_agent_class.return_value = mock_agent_instance
 
-                    with patch("builtins.print") as mock_print:
-                        await app.startup()
+                    # Mock the startup confirmation to return True (continue)
+                    with patch.object(
+                        app,
+                        "_wait_for_startup_confirmation",
+                        new_callable=AsyncMock,
+                        return_value=True,
+                    ):
+                        with patch("builtins.print") as mock_print:
+                            result = await app.startup()
 
-                        # Check that startup messages were printed
-                        assert mock_print.call_count > 0
+                            # Check that startup messages were printed
+                            assert mock_print.call_count > 0
+                            # Check that startup returns True (user wants to continue)
+                            assert result is True
 
     @pytest.mark.asyncio
     async def test_run_esc_key_handling(self):
         """Test ESC key toggles mode."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock):
+        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
             with patch.object(app, "shutdown", new_callable=AsyncMock):
                 with patch.object(app.ui, "display_header"):
                     # Create a controlled input sequence

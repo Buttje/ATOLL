@@ -1,18 +1,24 @@
 {
   "servers": {
     "example-stdio": {
-      "transport": "stdio",
+      "type": "stdio",
       "command": "python",
       "args": ["path/to/your/mcp_server.py"],
-      "timeoutSeconds": 30,
+      "cwd": "${workspaceFolder}",
       "env": {
         "ENV_VAR": "value"
       }
     },
     "example-http": {
-      "transport": "streamable_http",
-      "url": "http://localhost:8080",
-      "timeoutSeconds": 30
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
+      }
+    },
+    "example-sse": {
+      "type": "sse",
+      "url": "http://localhost:8080/events"
     }
   }
 }

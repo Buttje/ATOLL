@@ -67,18 +67,6 @@ class TestHelpCommand:
             assert "changemodel" in all_output
             assert "model-name" in all_output
 
-    def test_display_command_help_install(self):
-        """Test display_command_help for install command."""
-        app = Application()
-
-        with patch("builtins.print") as mock_print:
-            app.display_command_help("install")
-            mock_print.assert_called()
-            calls = [str(call_obj) for call_obj in mock_print.call_args_list]
-            all_output = " ".join(calls).lower()
-            assert "install" in all_output
-            assert "source" in all_output
-
     def test_display_command_help_unknown(self):
         """Test display_command_help for unknown command."""
         app = Application()

@@ -19,7 +19,7 @@ class TestIntegration:
         ollama_config_file = tmp_path / ".ollamaConfig.json"
         ollama_config_file.write_text('{"model": "test"}')
 
-        mcp_config_file = tmp_path / ".mcpConfig.json"
+        mcp_config_file = tmp_path / "mcp.json"
         mcp_config_file.write_text('{"servers": {}}')
 
         with patch("atoll.config.manager.ConfigManager") as mock_config_manager:

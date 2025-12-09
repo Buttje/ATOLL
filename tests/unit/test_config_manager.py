@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from atoll.config.manager import ConfigManager
-from atoll.config.models import OllamaConfig, MCPServerConfig
+from atoll.config.models import MCPServerConfig, OllamaConfig
 
 
 class TestConfigManager:
@@ -15,12 +15,14 @@ class TestConfigManager:
         manager = ConfigManager()
 
         expected_ollama_path = Path.home() / ".ollama_server" / ".ollama_config.json"
+        expected_mcp_path = Path.home() / ".atoll" / "mcp.json"
         assert manager.ollama_config_path == expected_ollama_path
-        assert manager.mcp_config_path == Path(".mcpConfig.json")
+        assert manager.mcp_config_path == expected_mcp_path
         assert manager.ollama_config is None
         assert manager.mcp_config is None
-        # Verify the directory was created
+        # Verify the directories were created
         assert manager.ollama_config_path.parent.exists()
+        assert manager.mcp_config_path.parent.exists()
 
     def test_initialization_with_paths(self, tmp_path):
         """Test config manager with custom paths."""
@@ -145,32 +147,73 @@ class TestMCPServerConfig:
     def test_to_dict_all_fields(self):
         """Test to_dict with all fields populated."""
         config = MCPServerConfig(
-            transport="stdio",
+            type="stdio",
             command="python",
             args=["server.py", "--port=8080"],
             env={"PATH": "/usr/bin"},
-            url="http://localhost",
             timeoutSeconds=60,
             cwd="/path/to/server",
         )
         result = config.to_dict()
-        assert result["transport"] == "stdio"
+        assert result["type"] == "stdio"
         assert result["command"] == "python"
         assert result["args"] == ["server.py", "--port=8080"]
         assert result["env"] == {"PATH": "/usr/bin"}
-        assert result["url"] == "http://localhost"
         assert result["timeoutSeconds"] == 60
         assert result["cwd"] == "/path/to/server"
 
     def test_to_dict_minimal(self):
         """Test to_dict with minimal fields."""
-        config = MCPServerConfig(transport="http")
+        config = MCPServerConfig(type="http", url="http://localhost:8080")
         result = config.to_dict()
-        assert result == {"transport": "http"}
+        assert result["type"] == "http"
+        assert result["url"] == "http://localhost:8080"
 
     def test_to_dict_default_timeout(self):
         """Test to_dict excludes default timeout."""
-        config = MCPServerConfig(transport="stdio", timeoutSeconds=30)
+        config = MCPServerConfig(type="stdio", command="python")
         result = config.to_dict()
         assert "timeoutSeconds" not in result
 
+    def test_from_dict_new_schema(self):
+        """Test from_dict with new schema format."""
+        data = {
+            "type": "stdio",
+            "command": "node",
+            "args": ["server.js"],
+            "env": {"NODE_ENV": "production"},
+            "cwd": "/app",
+        }
+        config = MCPServerConfig.from_dict(data)
+        assert config.type == "stdio"
+        assert config.command == "node"
+        assert config.args == ["server.js"]
+        assert config.env == {"NODE_ENV": "production"}
+        assert config.cwd == "/app"
+
+    def test_from_dict_legacy_transport(self):
+        """Test from_dict with legacy 'transport' field."""
+        data = {"transport": "stdio", "command": "python", "args": ["server.py"]}
+        config = MCPServerConfig.from_dict(data)
+        assert config.type == "stdio"
+        assert config.transport == "stdio"
+        assert config.command == "python"
+
+    def test_http_server_with_headers(self):
+        """Test HTTP server configuration with headers."""
+        config = MCPServerConfig(
+            type="http",
+            url="https://api.example.com/mcp",
+            headers={"Authorization": "Bearer token123"},
+        )
+        result = config.to_dict()
+        assert result["type"] == "http"
+        assert result["url"] == "https://api.example.com/mcp"
+        assert result["headers"] == {"Authorization": "Bearer token123"}
+
+    def test_sse_server(self):
+        """Test SSE server configuration."""
+        config = MCPServerConfig(type="sse", url="https://events.example.com/stream")
+        result = config.to_dict()
+        assert result["type"] == "sse"
+        assert result["url"] == "https://events.example.com/stream"
