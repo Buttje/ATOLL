@@ -17,6 +17,7 @@ class InputHandler:
     def __init__(self):
         """Initialize input handler."""
         self.is_windows = platform.system() == "Windows"
+        self.insert_mode = True  # True for insert mode, False for overtype mode
 
     def get_input(self, prompt: str = "", history: list[str] = None) -> str:
         """Get input from user with ESC detection, cursor movement, and history navigation.
@@ -70,20 +71,24 @@ class InputHandler:
                         if cursor_pos > 0:
                             cursor_pos -= 1
                             print("\x1b[D", end="", flush=True)
-                    elif char == "\x1b[H":  # Home key
+                    elif char == "\x1b[H":  # Home key (Pos1)
                         if cursor_pos > 0:
-                            print("\r", end="", flush=True)
+                            # Move cursor to start of buffer
+                            print(f"\x1b[{cursor_pos}D", end="", flush=True)
                             cursor_pos = 0
                     elif char == "\x1b[F":  # End key
                         if cursor_pos < len(result):
                             moves = len(result) - cursor_pos
-                            print("\x1b[C" * moves, end="", flush=True)
+                            print(f"\x1b[{moves}C", end="", flush=True)
                             cursor_pos = len(result)
-                    elif char == "\x1b[3~":  # Delete key
+                    elif char == "\x1b[2~":  # Insert key (Einfg)
+                        # Toggle insert/overtype mode
+                        self.insert_mode = not self.insert_mode
+                    elif char == "\x1b[3~":  # Delete key (Entf)
                         if cursor_pos < len(result):
                             result.pop(cursor_pos)
                             self._redraw_from_cursor(result, cursor_pos)
-                    # Ignore other escape sequences (Insert, Page Up/Down, etc.)
+                    # Ignore other escape sequences (Page Up/Down, etc.)
                     continue
                 elif char == "\x1b":  # Plain ESC key
                     return "ESC"
@@ -92,24 +97,40 @@ class InputHandler:
                 elif char in ("\r", "\n"):  # Enter key
                     print()  # New line after input
                     return "".join(result)
-                elif char == "\x08" or char == "\x7f":  # Backspace (0x08 on Windows, 0x7f on Unix)
+                elif char == "\x08" or char == "\x7f":  # Backspace
                     if cursor_pos > 0:
                         # Remove character before cursor
                         result.pop(cursor_pos - 1)
                         cursor_pos -= 1
-                        # Redraw line from cursor position
+                        # Move cursor back and redraw
+                        print("\x1b[D", end="", flush=True)
                         self._redraw_from_cursor(result, cursor_pos)
                 elif char == "\x03":  # Ctrl+C
                     raise KeyboardInterrupt
                 else:
-                    # Insert character at cursor position
-                    result.insert(cursor_pos, char)
-                    cursor_pos += 1
-                    # Redraw from cursor if not at end
-                    if cursor_pos < len(result):
-                        self._redraw_from_cursor(result, cursor_pos)
+                    # Handle character input based on mode
+                    if self.insert_mode:
+                        # Insert mode: insert character at cursor position
+                        result.insert(cursor_pos, char)
+                        cursor_pos += 1
+                        # Redraw from cursor if not at end
+                        if cursor_pos < len(result):
+                            # Need to redraw from before insertion point
+                            print(char, end="", flush=True)
+                            self._redraw_from_cursor(result, cursor_pos)
+                        else:
+                            print(char, end="", flush=True)
                     else:
-                        print(char, end="", flush=True)
+                        # Overtype mode: replace character at cursor position
+                        if cursor_pos < len(result):
+                            result[cursor_pos] = char
+                            cursor_pos += 1
+                            print(char, end="", flush=True)
+                        else:
+                            # At end of buffer, append
+                            result.append(char)
+                            cursor_pos += 1
+                            print(char, end="", flush=True)
         except KeyboardInterrupt:
             # Re-raise to be handled by the main loop
             raise
