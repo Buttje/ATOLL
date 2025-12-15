@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+from contextlib import suppress
 from typing import Any, Optional
 
 from ..config.models import MCPServerConfig
@@ -133,21 +134,30 @@ class MCPClient:
         """Disconnect from the MCP server."""
         if self.process:
             try:
-                # Close pipes before terminating
-                if self.process.stdin:
+                # Terminate the process first
+                if self.process.returncode is None:
+                    self.process.terminate()
+
+                    # Wait for process to finish with timeout
+                    try:
+                        await asyncio.wait_for(self.process.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        logger.warning(f"Process '{self.name}' did not terminate, killing it")
+                        self.process.kill()
+                        with suppress(asyncio.TimeoutError):
+                            await asyncio.wait_for(self.process.wait(), timeout=2.0)
+
+                # Close all pipes after process is terminated
+                if self.process.stdin and not self.process.stdin.is_closing():
                     self.process.stdin.close()
-                    await self.process.stdin.wait_closed()
+                if self.process.stdout and not self.process.stdout.at_eof():
+                    self.process.stdout.feed_eof()
+                if self.process.stderr and not self.process.stderr.at_eof():
+                    self.process.stderr.feed_eof()
 
-                # Terminate the process
-                self.process.terminate()
+                # Give a moment for cleanup
+                await asyncio.sleep(0.1)
 
-                # Wait for process to finish with timeout
-                try:
-                    await asyncio.wait_for(self.process.wait(), timeout=5.0)
-                except asyncio.TimeoutError:
-                    logger.warning(f"Process '{self.name}' did not terminate, killing it")
-                    self.process.kill()
-                    await self.process.wait()
             except Exception as e:
                 logger.error(f"Error disconnecting from '{self.name}': {e}")
             finally:

@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import sys
+import warnings
 from typing import Optional
 
 from .agent.agent import OllamaMCPAgent
@@ -11,6 +12,10 @@ from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
 from .ui.terminal import TerminalUI, UIMode
 from .utils.logger import setup_logging
+
+# Suppress ResourceWarning for unclosed transports on Windows
+# This is a known issue with ProactorEventLoop subprocess cleanup
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed transport.*")
 
 
 class Application:
