@@ -54,6 +54,12 @@ class ReActEngine:
     The loop continues until a final answer is reached or max iterations exceeded.
     """
 
+    # Regex patterns for parsing LLM responses
+    _THOUGHT_PATTERN = r"Thought:\s*(.+?)(?=\n(?:Action:|Final Answer:)|$)"
+    _FINAL_ANSWER_PATTERN = r"Final Answer:\s*(.+)"
+    _ACTION_PATTERN = r"Action:\s*(.+?)(?=\n|$)"
+    _ACTION_INPUT_PATTERN = r"Action Input:\s*(.+?)(?=\n|$)"
+
     def __init__(
         self,
         config: Optional[ReActConfig] = None,
@@ -218,6 +224,12 @@ Remember:
 
         return context
 
+    # Regex patterns for parsing LLM responses
+    _THOUGHT_PATTERN = r"Thought:\s*(.+?)(?=\n(?:Action:|Final Answer:)|$)"
+    _FINAL_ANSWER_PATTERN = r"Final Answer:\s*(.+)"
+    _ACTION_PATTERN = r"Action:\s*(.+?)(?=\n|$)"
+    _ACTION_INPUT_PATTERN = r"Action Input:\s*(.+?)(?=\n|$)"
+
     def _parse_response(self, response: str, step_number: int) -> Optional[dict]:
         """Parse LLM response into structured format.
 
@@ -230,19 +242,19 @@ Remember:
         result = {}
 
         # Extract thought
-        thought_match = re.search(r"Thought:\s*(.+?)(?=\n(?:Action:|Final Answer:)|$)", response, re.DOTALL)
+        thought_match = re.search(self._THOUGHT_PATTERN, response, re.DOTALL)
         if thought_match:
             result["thought"] = thought_match.group(1).strip()
 
         # Extract final answer
-        final_match = re.search(r"Final Answer:\s*(.+)", response, re.DOTALL)
+        final_match = re.search(self._FINAL_ANSWER_PATTERN, response, re.DOTALL)
         if final_match:
             result["final_answer"] = final_match.group(1).strip()
             return result
 
         # Extract action and action input
-        action_match = re.search(r"Action:\s*(.+?)(?=\n|$)", response)
-        action_input_match = re.search(r"Action Input:\s*(.+?)(?=\n|$)", response, re.DOTALL)
+        action_match = re.search(self._ACTION_PATTERN, response)
+        action_input_match = re.search(self._ACTION_INPUT_PATTERN, response, re.DOTALL)
 
         if action_match and action_input_match:
             result["action"] = {

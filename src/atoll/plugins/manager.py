@@ -26,11 +26,13 @@ class PluginManager:
         """Initialize plugin manager.
 
         Args:
-            plugins_dir: Directory to search for plugins (default: ./atoll_agents)
+            plugins_dir: Directory to search for plugins (default: {package_root}/../../atoll_agents)
         """
         if plugins_dir is None:
-            # Default to atoll_agents in project root
-            plugins_dir = Path.cwd() / "atoll_agents"
+            # Default to atoll_agents relative to package root
+            # This works regardless of current working directory
+            package_dir = Path(__file__).parent.parent.parent  # atoll/plugins -> atoll -> src -> project_root
+            plugins_dir = package_dir.parent / "atoll_agents"
 
         self.plugins_dir = Path(plugins_dir)
         self.agents: dict[str, ATOLLAgent] = {}
