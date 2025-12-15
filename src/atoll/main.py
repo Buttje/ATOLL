@@ -10,6 +10,7 @@ from .config.manager import ConfigManager
 from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
 from .ui.terminal import TerminalUI, UIMode
+from .utils.logger import setup_logging
 
 
 class Application:
@@ -664,7 +665,16 @@ def main():
         action="version",
         version=f"ATOLL {get_version()}",
     )
-    parser.parse_args()
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
+    args = parser.parse_args()
+
+    # Setup logging
+    log_level = "DEBUG" if args.debug else "WARNING"
+    setup_logging(level=log_level)
 
     try:
         app = Application()

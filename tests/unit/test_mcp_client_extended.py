@@ -108,8 +108,8 @@ class TestMCPClientExtended:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_list_tools_with_cached_tools(self):
-        """Test listing tools with cached tools."""
+    async def test_list_tools_with_server_response(self):
+        """Test listing tools from server response."""
         config = MCPServerConfig(
             transport="stdio",
             command="python",
@@ -118,21 +118,22 @@ class TestMCPClientExtended:
         client = MCPClient("test", config)
         client.connected = True
 
-        # Test with dict format
-        client.tools = {"tool1": {"description": "Tool 1"}, "tool2": {"description": "Tool 2"}}
+        # Mock server response with tools
+        mock_response = {
+            "result": {
+                "tools": [
+                    {"name": "tool1", "description": "Tool 1"},
+                    {"name": "tool2", "description": "Tool 2"},
+                ]
+            }
+        }
 
-        tools = await client.list_tools()
-        assert len(tools) == 2
-        assert tools[0]["name"] in ["tool1", "tool2"]
-
-        # Test with list format
-        client.tools = [
-            {"name": "tool1", "description": "Tool 1"},
-            {"name": "tool2", "description": "Tool 2"},
-        ]
-
-        tools = await client.list_tools()
-        assert len(tools) == 2
+        with patch.object(client, "_send_message", new_callable=AsyncMock):
+            with patch.object(client, "_receive_message", return_value=mock_response):
+                tools = await client.list_tools()
+                assert len(tools) == 2
+                assert tools[0]["name"] == "tool1"
+                assert tools[1]["name"] == "tool2"
 
     @pytest.mark.asyncio
     async def test_list_tools_not_connected(self):

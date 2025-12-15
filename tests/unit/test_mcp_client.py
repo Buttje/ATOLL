@@ -26,9 +26,8 @@ class TestMCPClient:
         assert client.config == config
         assert not client.connected
         assert client.process is None
-        assert client.tools == {}
-        assert client.prompts == {}
-        assert client.resources == []
+        assert client.capabilities == {}
+        assert client.server_info == {}
 
     @pytest.mark.asyncio
     async def test_connect_stdio(self):

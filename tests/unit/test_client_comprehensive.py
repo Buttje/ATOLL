@@ -68,18 +68,16 @@ class TestMCPClientComprehensive:
 
         response = {
             "result": {
-                "tools": {"tool1": {"name": "tool1"}},
-                "prompts": {"prompt1": {"name": "prompt1"}},
-                "resources": [{"name": "resource1"}],
+                "capabilities": {"tools": {"listChanged": True}},
+                "serverInfo": {"name": "test-server", "version": "1.0.0"},
             }
         }
 
         with patch.object(client, "_receive_message", return_value=response):
             await client._initialize()
 
-            assert client.tools == {"tool1": {"name": "tool1"}}
-            assert client.prompts == {"prompt1": {"name": "prompt1"}}
-            assert client.resources == [{"name": "resource1"}]
+            assert client.capabilities == {"tools": {"listChanged": True}}
+            assert client.server_info == {"name": "test-server", "version": "1.0.0"}
 
     @pytest.mark.asyncio
     async def test_list_tools_query_server(self):
