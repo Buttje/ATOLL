@@ -136,7 +136,7 @@ class Application:
             while self.ui.running:
                 try:
                     # Get user input
-                    user_input = self.ui.get_input(history=self.command_history)
+                    user_input = await self.ui.get_input_async(history=self.command_history)
 
                     # Check for ESC key
                     if user_input == "ESC":

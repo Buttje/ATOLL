@@ -129,7 +129,26 @@ class TerminalUI:
             else:
                 print(self.colors.reasoning(text))
 
-    def get_input(self, history: list[str] = None) -> str:
+    async def get_input_async(self, history: list[str] | None = None) -> str:
+        """Get user input based on current mode asynchronously.
+
+        Args:
+            history: Command history for up/down arrow navigation
+
+        Returns:
+            User input string
+        """
+        if history is None:
+            history = []
+
+        if self.mode == UIMode.PROMPT:
+            prompt_text = "\n💬 Enter prompt: "
+        else:
+            prompt_text = "\n⚙️  Enter command: "
+
+        return await self.input_handler.read_line_async(prompt_text)
+
+    def get_input(self, history: list[str] | None = None) -> str:
         """Get user input based on current mode.
 
         Args:

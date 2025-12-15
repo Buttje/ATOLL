@@ -17,28 +17,30 @@ class TestApplicationCoverage:
         """Test run method with exception handling."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
-            with patch.object(app, "shutdown", new_callable=AsyncMock):
-                with patch.object(app.ui, "display_header"):
-                    # Track calls and stop after exception
-                    exception_raised = [False]
+        # Track calls and stop after exception
+        exception_raised = [False]
 
-                    def get_input_side_effect(history=None):
-                        if not exception_raised[0]:
-                            exception_raised[0] = True
-                            raise Exception("Test error")
-                        # After exception, stop the loop
-                        app.ui.running = False
-                        return ""
+        async def get_input_side_effect(history=None):
+            if not exception_raised[0]:
+                exception_raised[0] = True
+                raise Exception("Test error")
+            # After exception, stop the loop
+            app.ui.running = False
+            return ""
 
-                    with patch.object(app.ui, "get_input", side_effect=get_input_side_effect):
-                        with patch.object(app.ui, "display_error") as mock_error:
-                            app.ui.running = True
+        with (
+            patch.object(app, "startup", new_callable=AsyncMock, return_value=True),
+            patch.object(app, "shutdown", new_callable=AsyncMock),
+            patch.object(app.ui, "display_header"),
+            patch.object(app.ui, "get_input_async", side_effect=get_input_side_effect),
+            patch.object(app.ui, "display_error") as mock_error,
+        ):
+            app.ui.running = True
 
-                            await app.run()
+            await app.run()
 
-                            # Verify error was displayed
-                            mock_error.assert_called_once()
+            # Verify error was displayed
+            mock_error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_command_with_spaces(self):
@@ -89,63 +91,66 @@ class TestApplicationCoverage:
         app.config_manager.ollama_config = OllamaConfig()
         app.config_manager.mcp_config = Mock(servers={})
 
-        with patch.object(app.config_manager, "load_configs"):
-            with patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class:
-                mock_manager = Mock()
-                mock_manager.connect_all = AsyncMock()
-                mock_manager_class.return_value = mock_manager
+        with (
+            patch.object(app.config_manager, "load_configs"),
+            patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class,
+            patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class,
+            patch.object(
+                app,
+                "_wait_for_startup_confirmation",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch("builtins.print") as mock_print,
+        ):
+            mock_manager = Mock()
+            mock_manager.connect_all = AsyncMock()
+            mock_manager_class.return_value = mock_manager
 
-                with patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class:
-                    # Mock the agent's async methods
-                    mock_agent_instance = Mock()
-                    mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
-                    mock_agent_instance.check_model_available = AsyncMock(return_value=True)
-                    mock_agent_class.return_value = mock_agent_instance
+            # Mock the agent's async methods
+            mock_agent_instance = Mock()
+            mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
+            mock_agent_instance.check_model_available = AsyncMock(return_value=True)
+            mock_agent_class.return_value = mock_agent_instance
 
-                    # Mock the startup confirmation to return True (continue)
-                    with patch.object(
-                        app,
-                        "_wait_for_startup_confirmation",
-                        new_callable=AsyncMock,
-                        return_value=True,
-                    ):
-                        with patch("builtins.print") as mock_print:
-                            result = await app.startup()
+            result = await app.startup()
 
-                            # Check that startup messages were printed
-                            assert mock_print.call_count > 0
-                            # Check that startup returns True (user wants to continue)
-                            assert result is True
+            # Check that startup messages were printed
+            assert mock_print.call_count > 0
+            # Check that startup returns True (user wants to continue)
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_run_esc_key_handling(self):
         """Test ESC key toggles mode."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
-            with patch.object(app, "shutdown", new_callable=AsyncMock):
-                with patch.object(app.ui, "display_header"):
-                    # Create a controlled input sequence
-                    call_count = [0]
+        # Create a controlled input sequence
+        call_count = [0]
 
-                    def get_input_side_effect(history=None):
-                        call_count[0] += 1
-                        if call_count[0] == 1:
-                            return "ESC"
-                        else:
-                            # Stop the loop after ESC is handled
-                            app.ui.running = False
-                            return "quit"
+        async def get_input_side_effect(history=None):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return "ESC"
+            else:
+                # Stop the loop after ESC is handled
+                app.ui.running = False
+                return "quit"
 
-                    with patch.object(app.ui, "get_input", side_effect=get_input_side_effect):
-                        with patch.object(app.ui, "toggle_mode") as mock_toggle:
-                            app.ui.mode = UIMode.COMMAND
-                            app.ui.running = True
+        with (
+            patch.object(app, "startup", new_callable=AsyncMock, return_value=True),
+            patch.object(app, "shutdown", new_callable=AsyncMock),
+            patch.object(app.ui, "display_header"),
+            patch.object(app.ui, "get_input_async", side_effect=get_input_side_effect),
+            patch.object(app.ui, "toggle_mode") as mock_toggle,
+        ):
+            app.ui.mode = UIMode.COMMAND
+            app.ui.running = True
 
-                            await app.run()
+            await app.run()
 
-                            # Verify toggle_mode was called
-                            mock_toggle.assert_called_once()
+            # Verify toggle_mode was called
+            mock_toggle.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_command_case_insensitive(self):

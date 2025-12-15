@@ -111,8 +111,8 @@ class TestStartupConfirmation:
         """Test that run() continues normally if startup confirmation is True."""
         app = Application()
 
-        # Make get_input stop the loop immediately
-        def side_effect_get_input(*args, **kwargs):
+        # Make get_input_async stop the loop immediately
+        async def side_effect_get_input(*args, **kwargs):
             app.ui.running = False
             return "quit"
 
@@ -120,7 +120,7 @@ class TestStartupConfirmation:
             patch.object(app, "startup", new_callable=AsyncMock, return_value=True),
             patch.object(app, "shutdown", new_callable=AsyncMock),
             patch.object(app.ui, "display_header") as mock_display_header,
-            patch.object(app.ui, "get_input", side_effect=side_effect_get_input),
+            patch.object(app.ui, "get_input_async", side_effect=side_effect_get_input),
             patch.object(app, "handle_command", new_callable=AsyncMock),
         ):
             app.ui.running = True
