@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoll"
-version = "1.1.0"
+version = "1.2.0"
 description = "LangChain-based agent integrating Ollama with MCP servers"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -36,6 +36,7 @@ dependencies = [
     "colorama>=0.4.6",
     "jsonschema>=4.20.0",
     "pydantic>=2.5.0",
+    "prompt-toolkit>=3.0.0",
 ]
 
 [project.optional-dependencies]

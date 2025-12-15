@@ -116,3 +116,20 @@ class MCPConfig:
         for name, server_data in data.get("servers", {}).items():
             servers[name] = MCPServerConfig.from_dict(server_data)
         return cls(servers=servers)
+
+
+@dataclass
+class AgentConfig:
+    """Agent behavior configuration."""
+
+    # ReAct engine settings
+    use_react_engine: bool = False
+    max_react_iterations: int = 5
+    max_observation_length: int = 1000
+    tool_timeout: float = 30.0
+    enable_parallel_actions: bool = False
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "AgentConfig":
+        """Create from dictionary."""
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
