@@ -36,6 +36,7 @@ dependencies = [
     "colorama>=0.4.6",
     "jsonschema>=4.20.0",
     "pydantic>=2.5.0",
+    "prompt-toolkit>=3.0.0",
 ]
 
 [project.optional-dependencies]

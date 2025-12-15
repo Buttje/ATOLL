@@ -16,11 +16,10 @@ class TestStartupConfirmation:
         """Test that pressing Enter returns True."""
         app = Application()
 
-        with patch("atoll.ui.input_handler.InputHandler") as MockInputHandler:
+        with patch("atoll.ui.prompt_input.AtollInput") as MockAtollInput:
             mock_handler = Mock()
-            mock_handler.is_windows = True
-            mock_handler._get_char_windows = Mock(return_value="\r")
-            MockInputHandler.return_value = mock_handler
+            mock_handler.read_line = Mock(return_value="")
+            MockAtollInput.return_value = mock_handler
 
             with patch("builtins.print"):
                 result = await app._wait_for_startup_confirmation()
@@ -32,11 +31,10 @@ class TestStartupConfirmation:
         """Test that pressing Escape returns False."""
         app = Application()
 
-        with patch("atoll.ui.input_handler.InputHandler") as MockInputHandler:
+        with patch("atoll.ui.prompt_input.AtollInput") as MockAtollInput:
             mock_handler = Mock()
-            mock_handler.is_windows = True
-            mock_handler._get_char_windows = Mock(return_value="\x1b")
-            MockInputHandler.return_value = mock_handler
+            mock_handler.read_line = Mock(return_value="ESC")
+            MockAtollInput.return_value = mock_handler
 
             with patch("builtins.print"):
                 result = await app._wait_for_startup_confirmation()

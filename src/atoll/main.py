@@ -103,20 +103,23 @@ class Application:
         """
         print(self.colors.info("Press [Enter] to continue or [Escape] to exit..."))
 
-        # Use the input handler to get a key press
-        from .ui.input_handler import InputHandler
+        # Use the prompt_toolkit input handler
+        from .ui.prompt_input import AtollInput
 
-        handler = InputHandler()
+        handler = AtollInput()
 
-        while True:
-            char = handler._get_char_windows() if handler.is_windows else handler._get_char_unix()
-
-            if char in ("\r", "\n"):  # Enter key
-                print()
-                return True
-            elif char == "\x1b":  # Escape key
+        try:
+            result = handler.read_line("")
+            # If ESC was pressed, result will be "ESC"
+            if result == "ESC":
                 print()
                 return False
+            # Any other input (including empty) means continue
+            print()
+            return True
+        except (KeyboardInterrupt, EOFError):
+            print()
+            return False
 
     async def run(self) -> None:
         """Run the main application loop."""

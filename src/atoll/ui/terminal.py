@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Callable, Optional
 
 from .colors import ColorScheme
-from .input_handler import InputHandler
+from .prompt_input import AtollInput
 
 
 class UIMode(Enum):
@@ -24,7 +24,7 @@ class TerminalUI:
         """Initialize terminal UI."""
         self.mode = UIMode.PROMPT
         self.colors = ColorScheme()
-        self.input_handler = InputHandler()
+        self.input_handler = AtollInput()
         self.running = True
         self.verbose = False  # Verbose mode flag
         self._clear_screen()
