@@ -18,7 +18,7 @@ class TestStartupConfirmation:
 
         with patch("atoll.ui.prompt_input.AtollInput") as MockAtollInput:
             mock_handler = Mock()
-            mock_handler.read_line = Mock(return_value="")
+            mock_handler.read_line_async = AsyncMock(return_value="")
             MockAtollInput.return_value = mock_handler
 
             with patch("builtins.print"):
@@ -33,7 +33,7 @@ class TestStartupConfirmation:
 
         with patch("atoll.ui.prompt_input.AtollInput") as MockAtollInput:
             mock_handler = Mock()
-            mock_handler.read_line = Mock(return_value="ESC")
+            mock_handler.read_line_async = AsyncMock(return_value="ESC")
             MockAtollInput.return_value = mock_handler
 
             with patch("builtins.print"):
@@ -48,74 +48,83 @@ class TestStartupConfirmation:
         app.config_manager.ollama_config = OllamaConfig()
         app.config_manager.mcp_config = Mock(servers={})
 
-        with patch.object(app.config_manager, "load_configs"):
-            with patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class:
-                mock_manager = Mock()
-                mock_manager.connect_all = AsyncMock()
-                mock_manager_class.return_value = mock_manager
+        with (
+            patch.object(app.config_manager, "load_configs"),
+            patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class,
+            patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class,
+        ):
+            mock_manager = Mock()
+            mock_manager.connect_all = AsyncMock()
+            mock_manager_class.return_value = mock_manager
 
-                with patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class:
-                    mock_agent_instance = Mock()
-                    mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
-                    mock_agent_instance.check_model_available = AsyncMock(return_value=True)
-                    mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance = Mock()
+            mock_agent_instance.check_server_connection = AsyncMock(return_value=True)
+            mock_agent_instance.check_model_available = AsyncMock(return_value=True)
+            mock_agent_class.return_value = mock_agent_instance
 
-                    # Mock the confirmation to return True
-                    with patch.object(
-                        app,
-                        "_wait_for_startup_confirmation",
-                        new_callable=AsyncMock,
-                        return_value=True,
-                    ):
-                        with patch("builtins.print"):
-                            result = await app.startup()
-                            assert result is True
+            # Mock the confirmation to return True
+            with (
+                patch.object(
+                    app,
+                    "_wait_for_startup_confirmation",
+                    new_callable=AsyncMock,
+                    return_value=True,
+                ),
+                patch("builtins.print"),
+            ):
+                result = await app.startup()
+                assert result is True
 
-                    # Mock the confirmation to return False
-                    with patch.object(
-                        app,
-                        "_wait_for_startup_confirmation",
-                        new_callable=AsyncMock,
-                        return_value=False,
-                    ):
-                        with patch("builtins.print"):
-                            result = await app.startup()
-                            assert result is False
+            # Mock the confirmation to return False
+            with (
+                patch.object(
+                    app,
+                    "_wait_for_startup_confirmation",
+                    new_callable=AsyncMock,
+                    return_value=False,
+                ),
+                patch("builtins.print"),
+            ):
+                result = await app.startup()
+                assert result is False
 
     @pytest.mark.asyncio
     async def test_run_exits_when_startup_returns_false(self):
         """Test that run() exits early if startup confirmation is False."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock, return_value=False):
-            with patch.object(app, "shutdown", new_callable=AsyncMock) as mock_shutdown:
-                with patch.object(app.ui, "display_header") as mock_display_header:
-                    with patch("builtins.print"):
-                        await app.run()
+        with (
+            patch.object(app, "startup", new_callable=AsyncMock, return_value=False),
+            patch.object(app, "shutdown", new_callable=AsyncMock) as mock_shutdown,
+            patch.object(app.ui, "display_header") as mock_display_header,
+            patch("builtins.print"),
+        ):
+            await app.run()
 
-                    # display_header should NOT be called
-                    mock_display_header.assert_not_called()
-                    # shutdown should still be called
-                    mock_shutdown.assert_called_once()
+            # display_header should NOT be called
+            mock_display_header.assert_not_called()
+            # shutdown should still be called
+            mock_shutdown.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_run_continues_when_startup_returns_true(self):
         """Test that run() continues normally if startup confirmation is True."""
         app = Application()
 
-        with patch.object(app, "startup", new_callable=AsyncMock, return_value=True):
-            with patch.object(app, "shutdown", new_callable=AsyncMock):
-                with patch.object(app.ui, "display_header") as mock_display_header:
-                    # Make get_input stop the loop immediately
-                    def side_effect_get_input(*args, **kwargs):
-                        app.ui.running = False
-                        return "quit"
+        # Make get_input stop the loop immediately
+        def side_effect_get_input(*args, **kwargs):
+            app.ui.running = False
+            return "quit"
 
-                    with patch.object(app.ui, "get_input", side_effect=side_effect_get_input):
-                        with patch.object(app, "handle_command", new_callable=AsyncMock):
-                            app.ui.running = True
+        with (
+            patch.object(app, "startup", new_callable=AsyncMock, return_value=True),
+            patch.object(app, "shutdown", new_callable=AsyncMock),
+            patch.object(app.ui, "display_header") as mock_display_header,
+            patch.object(app.ui, "get_input", side_effect=side_effect_get_input),
+            patch.object(app, "handle_command", new_callable=AsyncMock),
+        ):
+            app.ui.running = True
+            await app.run()
 
-                            await app.run()
-
-                            # display_header SHOULD be called
-                            mock_display_header.assert_called_once()
+            # display_header SHOULD be called
+            mock_display_header.assert_called_once()

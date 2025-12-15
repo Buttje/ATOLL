@@ -109,7 +109,7 @@ class Application:
         handler = AtollInput()
 
         try:
-            result = handler.read_line("")
+            result = await handler.read_line_async("")
             # If ESC was pressed, result will be "ESC"
             if result == "ESC":
                 print()

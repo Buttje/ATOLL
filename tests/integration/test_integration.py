@@ -49,14 +49,18 @@ class TestIntegration:
                 mock_llm = Mock()
                 mock_ollama.return_value = mock_llm
 
-                # Test startup doesn't crash
-                try:
-                    await asyncio.wait_for(app.startup(), timeout=5.0)
-                except asyncio.TimeoutError:
-                    pytest.fail("Application startup timed out")
+                # Mock the startup confirmation to avoid prompt_toolkit console requirement
+                with patch.object(
+                    app, "_wait_for_startup_confirmation", new_callable=AsyncMock, return_value=True
+                ):
+                    # Test startup doesn't crash
+                    try:
+                        await asyncio.wait_for(app.startup(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        pytest.fail("Application startup timed out")
 
-                assert app.agent is not None
-                assert app.mcp_manager is not None
+                    assert app.agent is not None
+                    assert app.mcp_manager is not None
 
     @pytest.mark.asyncio
     async def test_full_workflow(self):
@@ -88,13 +92,17 @@ class TestIntegration:
                 mock_llm.ainvoke = AsyncMock(return_value="Test response")
                 mock_ollama.return_value = mock_llm
 
-            # Start the application
-            await app.startup()
+                # Mock the startup confirmation to avoid prompt_toolkit console requirement
+                with patch.object(
+                    app, "_wait_for_startup_confirmation", new_callable=AsyncMock, return_value=True
+                ):
+                    # Start the application
+                    await app.startup()
 
-            # Process a prompt
-            with (
-                patch.object(app.ui, "display_user_input"),
-                patch.object(app.ui, "display_response"),
-            ):
-                result = await app.agent.process_prompt("Test prompt")
-                assert result is not None
+                    # Process a prompt
+                    with (
+                        patch.object(app.ui, "display_user_input"),
+                        patch.object(app.ui, "display_response"),
+                    ):
+                        result = await app.agent.process_prompt("Test prompt")
+                        assert result is not None
