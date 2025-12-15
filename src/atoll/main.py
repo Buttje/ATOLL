@@ -4,9 +4,11 @@ import argparse
 import asyncio
 import sys
 import warnings
+from pathlib import Path
 from typing import Optional
 
 from .agent.agent import OllamaMCPAgent
+from .agent.agent_manager import ATOLLAgentManager
 from .config.manager import ConfigManager
 from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
@@ -28,6 +30,7 @@ class Application:
         self.colors = ColorScheme()
         self.agent: Optional[OllamaMCPAgent] = None
         self.mcp_manager: Optional[MCPServerManager] = None
+        self.agent_manager: Optional[ATOLLAgentManager] = None
         self.command_history: list[str] = []
 
     async def startup(self) -> None:
@@ -88,6 +91,32 @@ class Application:
                     "  Please check if Ollama is running and the configuration is correct"
                 )
             )
+
+        # Discover and load ATOLL agents
+        print(self.colors.info("Discovering ATOLL agents..."))
+        agents_dir = Path("atoll_agents")
+        self.agent_manager = ATOLLAgentManager(agents_dir)
+        await self.agent_manager.load_all_agents()
+
+        # Display discovered agents
+        if self.agent_manager.loaded_agents:
+            print(
+                self.colors.answer_text(
+                    f"✓ Detected {len(self.agent_manager.loaded_agents)} ATOLL agent(s):"
+                )
+            )
+            for agent_name, agent_context in self.agent_manager.loaded_agents.items():
+                print(self.colors.user_input(f"  • {agent_name}"))
+                metadata = self.agent_manager.get_agent_metadata(agent_name)
+                if metadata:
+                    desc = metadata.get("description", "No description")
+                    print(self.colors.reasoning(f"    {desc}"))
+                if agent_context.mcp_manager:
+                    servers = agent_context.mcp_manager.list_servers()
+                    if servers:
+                        print(self.colors.reasoning(f"    MCP Servers: {', '.join(servers)}"))
+        else:
+            print(self.colors.reasoning("  No ATOLL agents detected"))
 
         print(self.colors.final_response("✓ Startup complete!"))
         print()
@@ -172,6 +201,8 @@ class Application:
     async def shutdown(self) -> None:
         """Perform cleanup on shutdown."""
         try:
+            if self.agent_manager:
+                await self.agent_manager.shutdown_all()
             if self.mcp_manager:
                 await self.mcp_manager.disconnect_all()
         except Exception:
@@ -217,9 +248,16 @@ class Application:
             else:
                 self.display_help()
 
+        elif cmd == "list":
+            if len(parts) >= 2:
+                list_type = parts[1].lower()
+                await self.handle_list_command(list_type)
+            else:
+                self.ui.display_error("Usage: list <server|models|agents|mcp|tools>")
+
+        # Keep legacy 'models' command for compatibility
         elif cmd == "models":
-            models = await self.agent.list_models()
-            self.ui.display_models(models, self.config_manager.ollama_config.model)
+            await self.handle_list_command("models")
 
         elif cmd == "changemodel":
             if len(parts) >= 2:
@@ -254,30 +292,79 @@ class Application:
             else:
                 self.ui.display_error("Usage: setserver <url> [port]")
 
+        # Keep legacy commands for compatibility
         elif cmd == "servers":
-            self.display_servers()
+            await self.handle_list_command("mcp")
 
         elif cmd == "tools":
-            self.display_tools()
+            await self.handle_list_command("tools")
+
+        elif cmd == "switchto":
+            if len(parts) >= 2:
+                agent_name = parts[1]  # Preserve case
+                await self.handle_switchto_command(agent_name)
+            else:
+                self.ui.display_error("Usage: switchto <agent-name>")
+
+        elif cmd == "back":
+            await self.handle_back_command()
 
         else:
             self.ui.display_error(f"Unknown command: '{cmd}'. Type 'help' for available commands.")
 
     def display_help(self) -> None:
         """Display help information for available commands."""
-        help_text = """
+        # Check if we're in an agent context
+        if self.agent_manager and not self.agent_manager.is_top_level():
+            help_text = f"""
+ATOLL - Agent Commands ({self.agent_manager.current_context.name}):
+---------------------------------------------------------------------
+  help                    - Display this help message
+  help mcp <name>         - Show details about agent's MCP server
+  help tool <name>        - Show details about agent's tool
+  list models             - List all available Ollama models
+  list agents             - List sub-agents of this agent
+  list mcp                - List agent's MCP servers
+  list tools              - List agent's MCP tools
+  changemodel <name>      - Switch to a different Ollama model
+  switchto <agent>        - Switch to a sub-agent context
+  back                    - Return to previous context
+  quit                    - Exit ATOLL
+
+Navigation:
+-----------
+  ESC                     - Toggle between Prompt and Command mode
+  Ctrl+V                  - Toggle verbose output mode
+  Ctrl+C                  - Exit ATOLL
+
+Prompt Mode:
+------------
+  Enter natural language prompts to interact with the AI agent.
+  This agent specializes in its domain capabilities.
+"""
+        else:
+            help_text = """
 ATOLL - Available Commands:
 ---------------------------
   help                    - Display this help message
   help server <name>      - Show details about a specific MCP server
   help tool <name>        - Show details about a specific tool
-  models                  - List all available Ollama models
+  list server             - Show Ollama server information
+  list models             - List all available Ollama models
+  list agents             - List available ATOLL agents
+  list mcp                - List connected MCP servers
+  list tools              - List available MCP tools
   changemodel <name>      - Switch to a different Ollama model
   setserver <url> [port]  - Configure Ollama server connection
+  switchto <agent>        - Switch to an ATOLL agent context
   clear                   - Clear conversation memory
-  servers                 - List connected MCP servers
-  tools                   - List available MCP tools
   quit                    - Exit ATOLL
+
+Legacy Commands (deprecated, use 'list' instead):
+-------------------------------------------------
+  models                  - Same as 'list models'
+  servers                 - Same as 'list mcp'
+  tools                   - Same as 'list tools'
 
 Navigation:
 -----------
@@ -292,13 +379,15 @@ Prompt Mode:
 
 Examples:
 ---------
-  > help server example-server
-  > help tool example-tool
+  > list agents
+  > switchto GhidraATOLL
+  > list mcp
+  > help server ghidramcp
+  > help tool decompile_function
   > changemodel llama2
   > setserver http://localhost 11434
-  > models
-  > clear
-  > tools
+  > back
+  > quit
 """
         print(self.colors.info(help_text))
 
@@ -317,8 +406,28 @@ Examples:
   help server myserver  - Show details about 'myserver' MCP server
   help tool mytool      - Show details about 'mytool' tool
 """,
+            "list": """
+Command: list
+Usage: list <type>
+
+Unified command to list various ATOLL resources and components.
+
+Types:
+  server  - Show Ollama server information (URL, port, active model)
+  models  - List all available Ollama models (currently active highlighted)
+  agents  - List available ATOLL agents in current context
+  mcp     - List MCP servers in current context (top-level or agent-specific)
+  tools   - List available MCP tools in current context
+
+Examples:
+  list server
+  list models
+  list agents
+  list mcp
+  list tools
+""",
             "models": """
-Command: models
+Command: models (deprecated - use 'list models')
 Usage: models
 
 List all available Ollama models on the configured server.
@@ -373,8 +482,37 @@ Aliases: clearmemory
 Example:
   clear
 """,
+            "switchto": """
+Command: switchto
+Usage: switchto <agent-name>
+
+Switch the command context to a specific ATOLL agent. When in an agent
+context, you can access agent-specific MCP servers and tools, and switch
+to sub-agents if they exist.
+
+Arguments:
+  <agent-name>  - Name of the ATOLL agent to switch to
+
+Examples:
+  switchto GhidraATOLL
+  list mcp           # Shows agent's MCP servers
+  back               # Return to previous context
+""",
+            "back": """
+Command: back
+Usage: back
+
+Return to the previous agent context. Works hierarchically - if you are
+in a sub-agent, returns to its parent agent. If in a top-level agent,
+returns to the main ATOLL context. Not available in main context.
+
+Example:
+  switchto GhidraATOLL
+  # ... work in agent context ...
+  back               # Return to main ATOLL
+""",
             "servers": """
-Command: servers
+Command: servers (deprecated - use 'list mcp')
 Usage: servers
 
 List all connected MCP (Model Context Protocol) servers.
@@ -384,7 +522,7 @@ Example:
   servers
 """,
             "tools": """
-Command: tools
+Command: tools (deprecated - use 'list tools')
 Usage: tools
 
 List all available tools from connected MCP servers.
@@ -587,6 +725,167 @@ Example:
         else:
             print(self.colors.warning("\nNo tools available."))
         print()
+
+    async def handle_list_command(self, list_type: str) -> None:
+        """Handle unified list command.
+
+        Args:
+            list_type: Type to list (server, models, agents, mcp, tools)
+        """
+        if list_type == "server":
+            # List Ollama server info
+            print(self.colors.info("\nOllama Server:"))
+            print(self.colors.user_input(f"  URL: {self.config_manager.ollama_config.base_url}"))
+            print(self.colors.user_input(f"  Port: {self.config_manager.ollama_config.port}"))
+            print(self.colors.user_input(f"  Model: {self.config_manager.ollama_config.model}"))
+            print()
+
+        elif list_type == "models":
+            models = await self.agent.list_models()
+            self.ui.display_models(models, self.config_manager.ollama_config.model)
+
+        elif list_type == "agents":
+            # List available agents in current context
+            agents = self.agent_manager.get_available_agents()
+            if agents:
+                context_name = (
+                    "Main ATOLL"
+                    if self.agent_manager.is_top_level()
+                    else self.agent_manager.current_context.name
+                )
+                print(self.colors.info(f"\nATOLL Agents ({context_name}):"))
+                for agent_name in agents:
+                    metadata = self.agent_manager.get_agent_metadata(agent_name)
+                    print(self.colors.answer_text(f"  • {agent_name}"))
+                    if metadata:
+                        desc = metadata.get("description", "No description")
+                        print(self.colors.reasoning(f"    {desc}"))
+                print()
+                print(self.colors.info("Use 'switchto <agent-name>' to enter agent context"))
+            else:
+                print(self.colors.warning("\nNo ATOLL agents available"))
+            print()
+
+        elif list_type == "mcp":
+            # List MCP servers for current context
+            if self.agent_manager.current_context:
+                # In agent context - show agent's MCP servers
+                if self.agent_manager.current_context.mcp_manager:
+                    servers = self.agent_manager.current_context.mcp_manager.list_servers()
+                    print(
+                        self.colors.info(
+                            f"\nMCP Servers ({self.agent_manager.current_context.name}):"
+                        )
+                    )
+                else:
+                    servers = []
+                    print(
+                        self.colors.warning(
+                            f"\n{self.agent_manager.current_context.name} has no MCP servers"
+                        )
+                    )
+            else:
+                # Top-level - show main MCP servers
+                servers = self.mcp_manager.list_servers()
+                print(self.colors.info("\nMCP Servers (Main):"))
+
+            if servers:
+                for server in servers:
+                    if (
+                        self.agent_manager.current_context
+                        and self.agent_manager.current_context.mcp_manager
+                    ):
+                        client = self.agent_manager.current_context.mcp_manager.get_client(server)
+                    else:
+                        client = self.mcp_manager.get_client(server)
+
+                    status = "✓ Connected" if client and client.connected else "✗ Disconnected"
+                    status_color = (
+                        self.colors.answer_text
+                        if client and client.connected
+                        else self.colors.error
+                    )
+                    print(self.colors.user_input(f"  • {server}"))
+                    print(status_color(f"    {status}"))
+                print()
+                print(self.colors.info("Use 'help server <name>' for detailed information"))
+            print()
+
+        elif list_type == "tools":
+            # List tools for current context
+            if self.agent_manager.current_context:
+                # In agent context - show agent's tools
+                if self.agent_manager.current_context.mcp_manager:
+                    tools = (
+                        self.agent_manager.current_context.mcp_manager.tool_registry.list_tools()
+                    )
+                    context_name = self.agent_manager.current_context.name
+                else:
+                    tools = []
+                    context_name = self.agent_manager.current_context.name
+            else:
+                # Top-level - show main tools
+                tools = self.mcp_manager.tool_registry.list_tools()
+                context_name = "Main"
+
+            if tools:
+                print(self.colors.info(f"\nAvailable Tools ({context_name}, {len(tools)} total):"))
+                for tool_name in tools:
+                    if (
+                        self.agent_manager.current_context
+                        and self.agent_manager.current_context.mcp_manager
+                    ):
+                        tool_info = (
+                            self.agent_manager.current_context.mcp_manager.tool_registry.get_tool(
+                                tool_name
+                            )
+                        )
+                    else:
+                        tool_info = self.mcp_manager.tool_registry.get_tool(tool_name)
+
+                    server = tool_info.get("server", "unknown")
+                    description = tool_info.get("description", "No description")
+                    print(self.colors.answer_text(f"  • {tool_name}"))
+                    print(self.colors.reasoning(f"    Server: {server}"))
+                    print(self.colors.reasoning(f"    Description: {description}"))
+                print()
+                print(self.colors.info("Use 'help tool <name>' for detailed information"))
+            else:
+                print(self.colors.warning(f"\nNo tools available in {context_name} context"))
+            print()
+
+        else:
+            self.ui.display_error(f"Unknown list type: '{list_type}'")
+            self.ui.display_info("Usage: list <server|models|agents|mcp|tools>")
+
+    async def handle_switchto_command(self, agent_name: str) -> None:
+        """Handle switchto command to enter agent context."""
+        if self.agent_manager.switch_to_agent(agent_name):
+            self.ui.display_info(f"✓ Switched to agent: {agent_name}")
+            self.ui.display_info(
+                "Available commands: help, list models, list agents, list mcp, list tools, changemodel, switchto, back"
+            )
+
+            # Update UI to show agent context
+            context_info = f"[{agent_name}]"
+            self.ui.display_info(f"Context: {context_info}")
+        else:
+            self.ui.display_error(f"Agent '{agent_name}' not found")
+            self.ui.display_info("Use 'list agents' to see available agents")
+
+    async def handle_back_command(self) -> None:
+        """Handle back command to return to previous context."""
+        if self.agent_manager.is_top_level():
+            self.ui.display_warning("Already at top level")
+        elif self.agent_manager.go_back():
+            if self.agent_manager.current_context:
+                self.ui.display_info(
+                    f"✓ Returned to agent: {self.agent_manager.current_context.name}"
+                )
+            else:
+                self.ui.display_info("✓ Returned to Main ATOLL")
+        else:
+            self.ui.display_error("Cannot go back")
 
     async def set_ollama_server(self, url: str, port: Optional[int] = None) -> None:
         """Set Ollama server connection properties."""

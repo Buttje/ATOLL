@@ -103,23 +103,31 @@ class TestAdditionalCommands:
 
     @pytest.mark.asyncio
     async def test_servers_command(self):
-        """Test servers command."""
+        """Test servers command (legacy - now uses list mcp)."""
         app = Application()
         app.mcp_manager = Mock()
+        app.agent_manager = Mock()
+        app.agent_manager.is_top_level.return_value = True
+        app.agent_manager.current_context = None
+        app.mcp_manager.list_servers.return_value = []
 
-        with patch.object(app, "display_servers") as mock_display:
+        with patch.object(app, "handle_list_command") as mock_list:
             await app.handle_command("servers")
-            mock_display.assert_called_once()
+            mock_list.assert_called_once_with("mcp")
 
     @pytest.mark.asyncio
     async def test_tools_command(self):
-        """Test tools command."""
+        """Test tools command (legacy - now uses list tools)."""
         app = Application()
         app.mcp_manager = Mock()
+        app.agent_manager = Mock()
+        app.agent_manager.is_top_level.return_value = True
+        app.agent_manager.current_context = None
+        app.mcp_manager.tool_registry.list_tools.return_value = []
 
-        with patch.object(app, "display_tools") as mock_display:
+        with patch.object(app, "handle_list_command") as mock_list:
             await app.handle_command("tools")
-            mock_display.assert_called_once()
+            mock_list.assert_called_once_with("tools")
 
     @pytest.mark.asyncio
     async def test_exit_command(self):

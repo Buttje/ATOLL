@@ -48,11 +48,23 @@ class AtollInput:
         # Create key bindings
         self.kb = self._create_key_bindings()
 
-        # Create prompt session (will be recreated for each prompt)
-        self.session: Optional[PromptSession] = None
+        # Session will be created lazily on first use (much faster than recreating each time)
+        self._session: Optional[PromptSession] = None
 
         # Insert/overtype mode tracking
         self.insert_mode = True
+
+    @property
+    def session(self) -> PromptSession:
+        """Get or create the prompt session (lazy initialization for performance)."""
+        if self._session is None:
+            self._session = PromptSession(
+                history=self.history,
+                key_bindings=self.kb,
+                enable_history_search=True,  # Enable Ctrl+R for history search
+                vi_mode=False,  # Use Emacs mode (readline-style)
+            )
+        return self._session
 
     def _create_key_bindings(self) -> KeyBindings:
         """Create custom key bindings for ESC and Ctrl+V."""
@@ -95,17 +107,8 @@ class AtollInput:
             KeyboardInterrupt: When Ctrl+C is pressed
             EOFError: When Ctrl+D is pressed (Unix) or Ctrl+Z (Windows)
         """
-        # Create a new session for this prompt
-        # This ensures each call gets fresh state
-        self.session = PromptSession(
-            history=self.history,
-            key_bindings=self.kb,
-            enable_history_search=True,  # Enable Ctrl+R for history search
-            vi_mode=False,  # Use Emacs mode (readline-style)
-        )
-
         try:
-            # Get input from user using async version
+            # Reuse the session for fast input (no recreation overhead)
             result = await self.session.prompt_async(prompt)
             return result
         except (EOFError, KeyboardInterrupt):
@@ -125,17 +128,8 @@ class AtollInput:
             KeyboardInterrupt: When Ctrl+C is pressed
             EOFError: When Ctrl+D is pressed (Unix) or Ctrl+Z (Windows)
         """
-        # Create a new session for this prompt
-        # This ensures each call gets fresh state
-        self.session = PromptSession(
-            history=self.history,
-            key_bindings=self.kb,
-            enable_history_search=True,  # Enable Ctrl+R for history search
-            vi_mode=False,  # Use Emacs mode (readline-style)
-        )
-
         try:
-            # Get input from user
+            # Reuse the session for fast input (no recreation overhead)
             result = self.session.prompt(prompt)
             return result
         except (EOFError, KeyboardInterrupt):
