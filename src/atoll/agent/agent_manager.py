@@ -141,7 +141,8 @@ class ATOLLAgentManager:
                 try:
                     with open(mcp_config_path, encoding="utf-8") as f:
                         mcp_data = json.load(f)
-                    mcp_config = MCPConfig(**mcp_data)
+                    # Use MCPConfig.from_dict() to properly parse standardized format
+                    mcp_config = MCPConfig.from_dict(mcp_data)
 
                     # Create MCP manager for this agent
                     mcp_manager = MCPServerManager(mcp_config)
