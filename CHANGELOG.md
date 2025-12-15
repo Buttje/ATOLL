@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-15
+
+### Added
+- **Modern Terminal Input System** using prompt_toolkit for cross-platform support
+  - Full readline-style editing (Ctrl+A, Ctrl+E, Ctrl+W, Ctrl+K, Ctrl+U)
+  - History search with Ctrl+R
+  - Persistent history saved to ~/.atoll_history
+  - Insert/overtype mode toggle
+  - Cross-platform support (Windows, Linux, macOS)
+- **ReAct Reasoning Engine** implementing Thought→Action→Observation pattern
+  - Iterative reasoning loop with configurable max iterations
+  - LangChain-compatible response parsing
+  - Tool execution with timeout and error handling
+  - Observation truncation for performance
+  - Full step tracking and reasoning trace for explainability
+- **Plugin Architecture** for extensible agent system
+  - ATOLLAgent base class for specialized agents
+  - PluginManager for automatic discovery and lifecycle management
+  - Agent metadata format (agent.json)
+  - Capability-based agent selection with confidence scoring
+  - Introspection capabilities (list plugins, get by capability/server)
+- **GhidraATOLL Agent** for binary reverse engineering
+  - Specialized for Ghidra and GhidraMCP integration
+  - Binary analysis, decompilation, symbol analysis capabilities
+  - Intelligent prompt scoring for relevance detection
+  - Keyword and pattern matching for binary analysis tasks
+- AgentConfig model for configurable agent behavior
+- Comprehensive test suite: 59 new tests (all passing)
+- Documentation for plugin creation and best practices
+
+### Changed
+- Terminal UI now uses AtollInput instead of InputHandler
+- Startup confirmation uses AtollInput for consistent behavior
+- Version bumped from 1.1.0 to 1.2.0
+
+### Dependencies
+- Added prompt-toolkit>=3.0.0 for terminal input handling
+
+### Technical Details
+- 378 tests passing (22 legacy tests superseded by new implementation)
+- New modules: prompt_input.py, react_engine.py, plugins/
+- Plugin directory: atoll_agents/ with automatic discovery
+- Full backward compatibility maintained for existing functionality
+
+## [1.1.0] - 2025-12-14
+
 ### Added
 - Project organization improvements following Python best practices
 - MANIFEST.in for proper package distribution
@@ -47,5 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type hints and mypy support
 - Pre-commit hooks for code quality
 
-[Unreleased]: https://github.com/Buttje/ATOLL/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Buttje/ATOLL/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Buttje/ATOLL/releases/tag/v1.2.0
+[1.1.0]: https://github.com/Buttje/ATOLL/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Buttje/ATOLL/releases/tag/v1.0.0
