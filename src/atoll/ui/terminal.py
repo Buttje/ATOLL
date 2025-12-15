@@ -1,7 +1,5 @@
 """Terminal UI implementation."""
 
-import os
-import platform
 import textwrap
 from enum import Enum
 from typing import Callable, Optional
@@ -31,7 +29,8 @@ class TerminalUI:
 
     def _clear_screen(self):
         """Clear terminal screen."""
-        os.system("cls" if platform.system() == "Windows" else "clear")
+        # Use ANSI escape codes for instant clearing (much faster than os.system)
+        print("\033[2J\033[H", end="")
 
     def _wrap_text(self, text: str, width: int = 80, indent: str = "") -> str:
         """Wrap text to specified width with optional indent."""

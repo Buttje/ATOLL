@@ -8,12 +8,16 @@ from atoll.ui.terminal import TerminalUI, UIMode
 class TestTerminalUIExtended:
     """Extended tests for TerminalUI."""
 
-    @patch("os.system")
-    def test_clear_screen(self, mock_system):
+    def test_clear_screen(self):
         """Test clearing screen."""
-        TerminalUI()
-        # Clear screen is called in __init__
-        mock_system.assert_called()
+        # Patch print before creating TerminalUI so it captures the __init__ clear
+        with patch("builtins.print") as mock_print:
+            TerminalUI()
+            # Clear screen is called in __init__ using ANSI escape codes
+            # The first call should be the ANSI clear sequence
+            first_call_args = mock_print.call_args_list[0][0]
+            assert len(first_call_args) > 0
+            assert "\033[2J\033[H" in first_call_args[0]
 
     def test_display_header(self):
         """Test displaying header."""
