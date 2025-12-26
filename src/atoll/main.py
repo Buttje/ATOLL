@@ -44,7 +44,7 @@ class Application:
         print(self.colors.info("Connecting to Ollama..."))
 
         # Create MCP manager (needed for agent initialization)
-        self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
+        self.mcp_manager = MCPServerManager(self.config_manager.mcp_config, ui=self.ui)
 
         # Create agent with MCP manager
         self.agent = OllamaMCPAgent(
