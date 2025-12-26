@@ -88,6 +88,9 @@ class Application:
                     "  Please check if Ollama is running and the configuration is correct"
                 )
             )
+            # Graceful exit - cannot continue without Ollama
+            print(self.colors.error("\nExiting ATOLL due to Ollama connection failure."))
+            sys.exit(1)
 
         # Now connect to MCP servers (after Ollama is verified)
         await self.mcp_manager.connect_all()
