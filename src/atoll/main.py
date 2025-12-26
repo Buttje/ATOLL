@@ -40,10 +40,6 @@ class Application:
         # Load configurations
         self.config_manager.load_configs()
 
-        # Connect to Ollama
-        print(self.colors.info("Connecting to Ollama..."))
-        # Test connection will happen when agent is created
-
         # Connect to MCP servers
         self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
         await self.mcp_manager.connect_all()
@@ -55,8 +51,8 @@ class Application:
             ui=self.ui,
         )
 
-        # Check Ollama connectivity
-        print(self.colors.info("Checking Ollama server connection..."))
+        # Connect to Ollama and check connectivity
+        print(self.colors.info("Connecting to Ollama..."))
         server_reachable = await self.agent.check_server_connection()
         if server_reachable:
             print(
