@@ -40,19 +40,16 @@ class Application:
         # Load configurations
         self.config_manager.load_configs()
 
-        # Connect to MCP servers
-        self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
-        await self.mcp_manager.connect_all()
-
-        # Create agent
+        # Connect to Ollama and check connectivity (must be done first)
+        print(self.colors.info("Connecting to Ollama..."))
+        # Create temporary MCP manager for agent initialization
+        temp_mcp_manager = MCPServerManager(self.config_manager.mcp_config)
         self.agent = OllamaMCPAgent(
             ollama_config=self.config_manager.ollama_config,
-            mcp_manager=self.mcp_manager,
+            mcp_manager=temp_mcp_manager,
             ui=self.ui,
         )
 
-        # Connect to Ollama and check connectivity
-        print(self.colors.info("Connecting to Ollama..."))
         server_reachable = await self.agent.check_server_connection()
         if server_reachable:
             print(
@@ -87,6 +84,14 @@ class Application:
                     "  Please check if Ollama is running and the configuration is correct"
                 )
             )
+
+        # Connect to MCP servers
+        self.mcp_manager = MCPServerManager(self.config_manager.mcp_config)
+        await self.mcp_manager.connect_all()
+
+        # Update agent with actual MCP manager and recreate tools
+        self.agent.mcp_manager = self.mcp_manager
+        self.agent.tools = self.agent._create_tools()
 
         # Discover and load ATOLL agents
         print(self.colors.info("Discovering ATOLL agents..."))
