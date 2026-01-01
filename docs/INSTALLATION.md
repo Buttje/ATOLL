@@ -679,6 +679,27 @@ See [Deployment Server V2 Usage Guide](DEPLOYMENT_SERVER_V2_USAGE.md) for full A
 
 ## Verification
 
+### Automated Prerequisites Check
+
+Before installation, you can run the automated validation script to check prerequisites:
+
+```bash
+# Quick check (essential prerequisites only)
+python scripts/validate_installation.py --quick
+
+# Full check (all prerequisites and system resources)
+python scripts/validate_installation.py
+```
+
+The script validates:
+- Python version (3.9+)
+- pip availability
+- Git installation
+- Ollama installation and server status
+- System resources (RAM, disk space)
+- Platform-specific requirements
+- Existing configurations
+
 ### Test Installation
 
 ```bash
