@@ -168,5 +168,5 @@ For issues with installation scripts:
 
 ---
 
-**Last Updated:** January 2026  
+**Last Updated:** January 2025  
 **Version:** 2.0.0

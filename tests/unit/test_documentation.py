@@ -103,8 +103,14 @@ class TestInstallationGuide:
         # Convert headers to IDs (GitHub markdown style)
         header_ids = set()
         for header in headers:
-            # Remove markdown formatting and convert to lowercase
-            header_id = re.sub(r"[^\w\s-]", "", header).strip().lower().replace(" ", "-")
+            # Remove markdown formatting, convert to lowercase, handle spaces/hyphens
+            # This matches GitHub's anchor generation algorithm
+            header_id = re.sub(r"[^\w\s-]", "", header).strip().lower()
+            # Replace spaces and multiple hyphens with single hyphen
+            header_id = re.sub(r"[\s]+", "-", header_id)
+            header_id = re.sub(r"-+", "-", header_id)
+            # Remove leading/trailing hyphens
+            header_id = header_id.strip("-")
             header_ids.add(header_id)
 
         # Check each internal link

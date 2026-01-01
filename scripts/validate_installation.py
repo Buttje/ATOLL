@@ -167,8 +167,11 @@ def check_system_resources():
             print_warning(f"RAM: {ram_gb:.1f} GB (recommended: 8+ GB)")
 
         # Check disk space - use current working directory's drive/mount
-        # This works on both Windows (C:\, D:\) and Unix (/, /home, etc.)
-        disk = psutil.disk_usage(Path.cwd().anchor or ".")
+        # On Windows: Path.cwd().anchor returns 'C:\', 'D:\', etc.
+        # On Unix: Path.cwd().anchor returns '/'
+        # This approach works on both platforms
+        check_path = Path.cwd().anchor if Path.cwd().anchor else Path.cwd()
+        disk = psutil.disk_usage(check_path)
         disk_gb = disk.free / (1024**3)
         if disk_gb >= 10:
             print_success(f"Free disk space: {disk_gb:.1f} GB")

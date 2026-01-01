@@ -1,7 +1,7 @@
 # ATOLL Installation Guide
 
 **Version:** 2.0.0  
-**Last Updated:** January 2026
+**Last Updated:** January 2025
 
 This comprehensive guide covers installation of ATOLL on Linux and Windows platforms, including prerequisites, installation methods, configuration, and running as a system service.
 
