@@ -1,10 +1,10 @@
 """Async utility functions."""
 
 import asyncio
-from typing import Any, Callable, Optional, TypeVar, Coroutine
-from functools import wraps
+from collections.abc import Coroutine
+from typing import Any, Callable, Optional, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 async def timeout_wrapper(
@@ -32,5 +32,5 @@ async def retry_async(
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
-            await asyncio.sleep(delay * (2 ** attempt))
+            await asyncio.sleep(delay * (2**attempt))
     return None

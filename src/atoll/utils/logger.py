@@ -14,13 +14,13 @@ def setup_logging(
     """Set up logging configuration."""
     if format_string is None:
         format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
+
     handlers = [logging.StreamHandler(sys.stdout)]
-    
+
     if log_file:
         log_file.parent.mkdir(parents=True, exist_ok=True)
         handlers.append(logging.FileHandler(log_file))
-    
+
     logging.basicConfig(
         level=getattr(logging, level.upper()),
         format=format_string,

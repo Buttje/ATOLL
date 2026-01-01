@@ -107,34 +107,34 @@ class TestVerboseMode:
             assert "Verbose: ON" not in printed_text
 
 
-class TestInputHandlerCtrlV:
-    """Tests for Ctrl+V detection in InputHandler."""
+class TestInputHandlerCtrlB:
+    """Tests for Ctrl+B detection in InputHandler."""
 
     @patch("platform.system", return_value="Linux")
-    def test_ctrl_v_detection_unix(self, mock_platform):
-        """Test Ctrl+V detection on Unix systems."""
+    def test_ctrl_b_detection_unix(self, mock_platform):
+        """Test Ctrl+B detection on Unix systems."""
         handler = InputHandler()
 
         # Mock the _get_char_unix method directly
-        with patch.object(handler, "_get_char_unix", return_value="\x16"):
+        with patch.object(handler, "_get_char_unix", return_value="\x02"):
             result = handler.get_input()
 
-        assert result == "CTRL_V"
+        assert result == "CTRL_B"
 
     @patch("platform.system", return_value="Windows")
-    def test_ctrl_v_detection_windows(self, mock_platform):
-        """Test Ctrl+V detection on Windows (mocking at method level)."""
+    def test_ctrl_b_detection_windows(self, mock_platform):
+        """Test Ctrl+B detection on Windows (mocking at method level)."""
         handler = InputHandler()
 
         # Mock the _get_char_windows method directly
-        with patch.object(handler, "_get_char_windows", return_value="\x16"):
+        with patch.object(handler, "_get_char_windows", return_value="\x02"):
             result = handler.get_input()
 
-        assert result == "CTRL_V"
+        assert result == "CTRL_B"
 
     @patch("platform.system", return_value="Linux")
-    def test_regular_input_after_ctrl_v_added(self, mock_platform):
-        """Test that regular input still works after adding Ctrl+V detection."""
+    def test_regular_input_after_ctrl_b_added(self, mock_platform):
+        """Test that regular input still works after adding Ctrl+B detection."""
         handler = InputHandler()
 
         # Mock the _get_char_unix method to simulate typing "test" and pressing enter

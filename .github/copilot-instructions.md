@@ -10,7 +10,9 @@ ATOLL is a LangChain-based AI agent that bridges Ollama LLMs with MCP (Model Con
 - **Configuration** (`config/`): Pydantic dataclasses for type-safe configs (`~/.ollama_server/.ollama_config.json`, `mcp.json`)
 - **UI Layer** (`ui/`): Terminal interface with mode toggling (ESC key), color schemes, input handling
 
-**Key Data Flow**: User input → TerminalUI → Application.handle_prompt/command → OllamaMCPAgent → MCPServerManager → MCPClient (stdio subprocess) → Tool execution → Response formatting → Display
+**Key Data Flow**: User input → TerminalUI → Application.handle_prompt/command → RootAgent (extends ATOLLAgent) → MCPServerManager → MCPClient (stdio subprocess) → Tool execution → Response formatting → Display
+
+**Architecture Note**: The legacy `OllamaMCPAgent` class has been removed. All agent functionality is now in the `ATOLLAgent` base class, with `RootAgent` as the primary implementation for user interaction.
 
 ## Critical Patterns
 

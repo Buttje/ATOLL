@@ -36,8 +36,9 @@ def test_venv_validation_complete(tmp_path):
         with patch("install.run_command") as mock_run:
             mock_run.return_value = True
             with patch("sys.exit"):
-                # Should not recreate venv
-                install.main()
+                with patch("builtins.input", return_value="1"):  # Mock user input
+                    # Should not recreate venv
+                    install.main()
 
                 # Verify venv creation was not called
                 calls = [
@@ -64,8 +65,9 @@ def test_venv_validation_incomplete(tmp_path):
         with patch("install.run_command") as mock_run:
             mock_run.return_value = True
             with patch("sys.exit"):
-                # Should recreate venv
-                install.main()
+                with patch("builtins.input", return_value="1"):  # Mock user input
+                    # Should recreate venv
+                    install.main()
 
                 # Verify venv creation was called
                 calls = [
@@ -100,8 +102,9 @@ def test_venv_validation_partial(tmp_path):
         with patch("install.run_command") as mock_run:
             mock_run.return_value = True
             with patch("sys.exit"):
-                # Should recreate venv
-                install.main()
+                with patch("builtins.input", return_value="1"):  # Mock user input
+                    # Should recreate venv
+                    install.main()
 
                 # Verify venv creation was called
                 calls = [
@@ -126,8 +129,9 @@ def test_venv_validation_no_venv(tmp_path):
         with patch("install.run_command") as mock_run:
             mock_run.return_value = True
             with patch("sys.exit"):
-                # Should create venv
-                install.main()
+                with patch("builtins.input", return_value="1"):  # Mock user input
+                    # Should create venv
+                    install.main()
 
                 # Verify venv creation was called
                 calls = [

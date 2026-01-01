@@ -1,6 +1,6 @@
 """Configuration management for Ollama MCP Agent."""
 
-from .models import OllamaConfig, MCPConfig, MCPServerConfig
 from .manager import ConfigManager
+from .models import MCPConfig, MCPServerConfig, OllamaConfig
 
 __all__ = ["OllamaConfig", "MCPConfig", "MCPServerConfig", "ConfigManager"]

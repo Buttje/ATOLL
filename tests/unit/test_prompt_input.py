@@ -75,17 +75,17 @@ class TestAtollInput:
         assert result == "ESC"
 
     @patch("atoll.ui.prompt_input.PromptSession")
-    def test_read_line_ctrl_v(self, mock_session_class):
-        """Test read_line returns CTRL_V when Ctrl+V is pressed."""
-        # Mock the session to return CTRL_V
+    def test_read_line_ctrl_b(self, mock_session_class):
+        """Test read_line returns CTRL_B when Ctrl+B is pressed."""
+        # Mock the session to return CTRL_B
         mock_session = Mock()
-        mock_session.prompt.return_value = "CTRL_V"
+        mock_session.prompt.return_value = "CTRL_B"
         mock_session_class.return_value = mock_session
 
         handler = AtollInput()
         result = handler.read_line("> ")
 
-        assert result == "CTRL_V"
+        assert result == "CTRL_B"
 
     @patch("atoll.ui.prompt_input.PromptSession")
     def test_read_line_keyboard_interrupt(self, mock_session_class):
@@ -176,7 +176,7 @@ class TestAtollInput:
 
         # Check that key bindings exist
         assert handler.kb is not None
-        # Key bindings should have handlers for ESC, Ctrl+V, and Insert
+        # Key bindings should have handlers for ESC, Ctrl+B, and Insert
         assert len(handler.kb.bindings) >= 3
 
     def test_insert_mode_toggle(self):

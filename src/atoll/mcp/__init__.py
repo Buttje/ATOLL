@@ -6,6 +6,6 @@ from .tool_registry import ToolRegistry
 
 __all__ = [
     "MCPClient",
-    "MCPServerManager", 
+    "MCPServerManager",
     "ToolRegistry",
 ]

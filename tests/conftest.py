@@ -1,12 +1,12 @@
 """Pytest configuration and fixtures."""
 
-import pytest
 import asyncio
 from pathlib import Path
-from typing import Dict, Any
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
 
-from atoll.config.models import OllamaConfig, MCPConfig, MCPServerConfig
+import pytest
+
+from atoll.config.models import MCPConfig, MCPServerConfig, OllamaConfig
 from atoll.mcp.client import MCPClient
 from atoll.ui.terminal import TerminalUI
 
@@ -53,9 +53,9 @@ def mock_mcp_client():
     client.connect = AsyncMock()
     client.disconnect = AsyncMock()
     client.call_tool = AsyncMock(return_value={"result": "success"})
-    client.list_tools = AsyncMock(return_value=[
-        {"name": "test_tool", "description": "A test tool"}
-    ])
+    client.list_tools = AsyncMock(
+        return_value=[{"name": "test_tool", "description": "A test tool"}]
+    )
     return client
 
 

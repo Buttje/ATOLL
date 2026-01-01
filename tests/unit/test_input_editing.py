@@ -1,6 +1,5 @@
 """Comprehensive tests for terminal input editing requirements."""
 
-import platform
 from unittest.mock import patch
 
 import pytest
@@ -140,7 +139,7 @@ class TestOvertypeMode:
     @patch("builtins.print")
     def test_7_insert_toggle(self, mock_print, mock_getch, mock_kbhit, mock_platform):
         """Test 7 - Insert toggle: a,b,c,←,Ins,X,Ins,Y,Enter → 'abXY'
-        
+
         Corrected from spec: After abc and left arrow, cursor is at pos 2.
         Overtyping X replaces 'c', cursor advances to pos 3.
         Toggle to insert, type Y at pos 3 gives 'abXY'.
@@ -254,7 +253,7 @@ class TestComplexOvertype:
     @patch("builtins.print")
     def test_12_insert_after_overtype(self, mock_print, mock_getch, mock_kbhit, mock_platform):
         """Test 12 - Insert after overtype: h,e,l,l,o,Home,Ins,X,Ins,Y,Enter → 'XYello'
-        
+
         Corrected from spec: After hello and Home, cursor is at pos 0.
         Overtyping X replaces 'h', cursor advances to pos 1.
         Toggle to insert, type Y at pos 1 gives 'XYello'.
@@ -302,14 +301,14 @@ class TestSpecialKeys:
     @patch("msvcrt.kbhit", return_value=True)
     @patch("msvcrt.getch")
     @patch("builtins.print")
-    def test_14_ctrl_v(self, mock_print, mock_getch, mock_kbhit, mock_platform):
-        """Test 14 - Ctrl+V: a,Ctrl+V → 'CTRL_V'"""
-        mock_getch.side_effect = [b"a", b"\x16"]
+    def test_14_ctrl_b(self, mock_print, mock_getch, mock_kbhit, mock_platform):
+        """Test 14 - Ctrl+B: a,Ctrl+B → 'CTRL_B'"""
+        mock_getch.side_effect = [b"a", b"\x02"]
 
         handler = InputHandler()
         result = handler.get_input()
 
-        assert result == "CTRL_V"
+        assert result == "CTRL_B"
 
     @patch("platform.system", return_value="Windows")
     @patch("msvcrt.kbhit", return_value=True)

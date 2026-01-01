@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from .base import ATOLLAgent
 from ..utils.logger import get_logger
+from .base import ATOLLAgent
 
 logger = get_logger(__name__)
 
@@ -31,7 +31,9 @@ class PluginManager:
         if plugins_dir is None:
             # Default to atoll_agents relative to package root
             # This works regardless of current working directory
-            package_dir = Path(__file__).parent.parent.parent  # atoll/plugins -> atoll -> src -> project_root
+            package_dir = Path(
+                __file__
+            ).parent.parent.parent  # atoll/plugins -> atoll -> src -> project_root
             plugins_dir = package_dir.parent / "atoll_agents"
 
         self.plugins_dir = Path(plugins_dir)
@@ -84,7 +86,7 @@ class PluginManager:
 
         # Load metadata
         try:
-            with open(metadata_file, "r", encoding="utf-8") as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 metadata = json.load(f)
         except Exception as e:
             logger.error(f"Failed to load metadata from {metadata_file}: {e}")

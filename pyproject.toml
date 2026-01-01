@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoll"
-version = "1.2.0"
+version = "2.0.0"
 description = "LangChain-based agent integrating Ollama with MCP servers"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -35,8 +35,12 @@ dependencies = [
     "aiohttp>=3.9.0",
     "colorama>=0.4.6",
     "jsonschema>=4.20.0",
-    "pydantic>=2.5.0",
+    "pydantic>=2.6.0",
     "prompt-toolkit>=3.0.0",
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "python-multipart>=0.0.6",
+    "tomli>=2.0.1; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -90,6 +94,11 @@ addopts = "-v --tb=short"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::RuntimeWarning:unittest.mock",
+    # Ignore warnings from pytest garbage collection of mock coroutines
+    "ignore:coroutine.*was never awaited:RuntimeWarning",
+    # Ignore asyncio pipe closure warnings during test cleanup
+    "ignore:Exception ignored.*_ProactorBasePipeTransport:pytest.PytestUnraisableExceptionWarning",
+    "ignore:Exception ignored.*BaseSubprocessTransport:pytest.PytestUnraisableExceptionWarning",
 ]
 
 [tool.ruff]

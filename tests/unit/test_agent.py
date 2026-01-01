@@ -1,16 +1,16 @@
 """Unit tests for the agent module."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from atoll.agent.agent import OllamaMCPAgent
+from atoll.agent.root_agent import RootAgent
 from atoll.mcp.server_manager import MCPServerManager
 from atoll.mcp.tool_registry import ToolRegistry
 
 
-class TestOllamaMCPAgent:
-    """Test the OllamaMCPAgent class."""
+class TestRootAgent:
+    """Test the RootAgent class (replaces OllamaMCPAgent tests)."""
 
     @pytest.mark.asyncio
     async def test_agent_initialization(self, ollama_config, mock_ui):
@@ -21,13 +21,15 @@ class TestOllamaMCPAgent:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
 
-        assert agent.ollama_config == ollama_config
+        assert agent.llm_config == ollama_config
         assert agent.mcp_manager == mock_manager
         assert agent.ui == mock_ui
         assert agent.llm is not None
@@ -41,8 +43,10 @@ class TestOllamaMCPAgent:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
@@ -51,6 +55,10 @@ class TestOllamaMCPAgent:
         mock_llm = Mock()
         mock_llm.invoke = Mock(return_value="Test response")
         agent.llm = mock_llm
+
+        # Mock reasoning engine if it exists
+        if agent.reasoning_engine:
+            agent.reasoning_engine.analyze = AsyncMock(return_value=[])
 
         result = await agent.process_prompt("Test prompt")
 
@@ -68,8 +76,10 @@ class TestOllamaMCPAgent:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
@@ -77,4 +87,4 @@ class TestOllamaMCPAgent:
         result = agent.change_model("new-model")
 
         assert result is True
-        assert agent.ollama_config.model == "new-model"
+        assert agent.llm_config.model == "new-model"

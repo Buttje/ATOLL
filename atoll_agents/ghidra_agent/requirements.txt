@@ -1,0 +1,16 @@
+# Python Dependencies for Ghidra ATOLL Agent v2.0.0
+# Compatible with Python 3.9-3.13
+
+# Core ATOLL dependencies
+pydantic>=2.0.0
+aiohttp>=3.9.0
+
+# LangChain for LLM integration
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-ollama>=0.1.0
+langchain-community>=0.2.0
+
+# Optional: Enhanced features (uncomment if needed)
+# colorama>=0.4.6  # For colored terminal output
+# prompt-toolkit>=3.0.0  # For enhanced input handling

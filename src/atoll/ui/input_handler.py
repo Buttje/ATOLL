@@ -27,7 +27,7 @@ class InputHandler:
             history: Command history for up/down arrow navigation
 
         Returns:
-            User input string or special commands (ESC, CTRL_V)
+            User input string or special commands (ESC, CTRL_B)
         """
         if history is None:
             history = []
@@ -92,8 +92,8 @@ class InputHandler:
                     continue
                 elif char == "\x1b":  # Plain ESC key
                     return "ESC"
-                elif char == "\x16":  # Ctrl+V
-                    return "CTRL_V"
+                elif char == "\x02":  # Ctrl+B
+                    return "CTRL_B"
                 elif char in ("\r", "\n"):  # Enter key
                     print()  # New line after input
                     return "".join(result)

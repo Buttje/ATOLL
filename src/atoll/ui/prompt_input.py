@@ -17,7 +17,7 @@ class AtollInput:
     - Arrow key history navigation
     - Persistent history saved to file
     - Insert/overtype mode toggle
-    - ESC and Ctrl+V detection
+    - ESC and Ctrl+B detection
     - Cross-platform compatibility (Windows, Linux, macOS)
     """
 
@@ -67,7 +67,7 @@ class AtollInput:
         return self._session
 
     def _create_key_bindings(self) -> KeyBindings:
-        """Create custom key bindings for ESC and Ctrl+V."""
+        """Create custom key bindings for ESC and Ctrl+B."""
         kb = KeyBindings()
 
         # ESC key - return special marker
@@ -76,11 +76,11 @@ class AtollInput:
             """Handle ESC key."""
             event.app.exit(result="ESC")
 
-        # Ctrl+V - return special marker
-        @kb.add("c-v")
+        # Ctrl+B - return special marker
+        @kb.add("c-b")
         def _(event):
-            """Handle Ctrl+V key."""
-            event.app.exit(result="CTRL_V")
+            """Handle Ctrl+B key."""
+            event.app.exit(result="CTRL_B")
 
         # Insert key - toggle insert/overtype mode
         @kb.add(Keys.Insert)
@@ -101,7 +101,7 @@ class AtollInput:
             prompt: Prompt string to display
 
         Returns:
-            User input string, or special commands "ESC" or "CTRL_V"
+            User input string, or special commands "ESC" or "CTRL_B"
 
         Raises:
             KeyboardInterrupt: When Ctrl+C is pressed
@@ -122,7 +122,7 @@ class AtollInput:
             prompt: Prompt string to display
 
         Returns:
-            User input string, or special commands "ESC" or "CTRL_V"
+            User input string, or special commands "ESC" or "CTRL_B"
 
         Raises:
             KeyboardInterrupt: When Ctrl+C is pressed
@@ -182,7 +182,7 @@ class AtollInput:
             history: Ignored (we use FileHistory instead) - kept for API compatibility
 
         Returns:
-            User input string or special commands (ESC, CTRL_V)
+            User input string or special commands (ESC, CTRL_B)
         """
         # history parameter is intentionally unused - we use FileHistory instead
         _ = history  # Explicitly mark as unused but kept for backwards compatibility
