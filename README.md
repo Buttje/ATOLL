@@ -558,9 +558,7 @@ Comprehensive documentation is available in the `docs/` directory:
   - Configuration guide
   - Troubleshooting
 
-### User Guides
-
-### User Guides
+### Deployment & Usage
 
 - **[Deployment Server V2 Usage Guide](docs/DEPLOYMENT_SERVER_V2_USAGE.md)** - Remote agent management with REST API
 - **[Deployment Quick Reference](docs/DEPLOYMENT_QUICK_REFERENCE.md)** - Quick reference for deployment commands
