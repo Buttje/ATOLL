@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -50,13 +51,21 @@ class ATOLLAgentManager:
     async def discover_agents(self) -> dict[str, dict]:
         """Discover all ATOLL agents in the agents directory.
 
+        Supports both:
+        - New format: agent.toml (preferred)
+        - Legacy format: agent.json + mcp.json
+
         Returns:
             Dict mapping agent names to their metadata
         """
         self.discovered_agents = {}
 
         if not self.agents_directory.exists():
-            logger.warning(f"Agents directory not found: {self.agents_directory}")
+            logger.info(f"Creating agents directory: {self.agents_directory}")
+            self._create_agents_directory()
+            logger.info(
+                "No specialized agents installed yet. Add agents to the 'atoll_agents' directory."
+            )
             return {}
 
         # Scan for agent subdirectories
@@ -64,23 +73,55 @@ class ATOLLAgentManager:
             if not agent_dir.is_dir():
                 continue
 
+            # Check for agent.toml (new format, preferred)
+            agent_toml_path = agent_dir / "agent.toml"
             agent_json_path = agent_dir / "agent.json"
-            if not agent_json_path.exists():
+
+            config_path = None
+            config_type = None
+
+            if agent_toml_path.exists():
+                config_path = agent_toml_path
+                config_type = "toml"
+            elif agent_json_path.exists():
+                config_path = agent_json_path
+                config_type = "json"
+            else:
+                # No configuration file found
                 continue
 
             try:
-                with open(agent_json_path, encoding="utf-8") as f:
-                    agent_metadata = json.load(f)
+                if config_type == "toml":
+                    # Load TOML configuration
+                    from ..config.models import TOMLAgentConfig
+
+                    toml_config = TOMLAgentConfig.from_toml_file(str(config_path))
+
+                    agent_metadata = {
+                        "name": toml_config.agent.name,
+                        "version": toml_config.agent.version,
+                        "description": toml_config.agent.description or "No description",
+                        "capabilities": toml_config.agent.capabilities,
+                        "directory": str(agent_dir),
+                        "config_path": str(config_path),
+                        "config_type": "toml",
+                        "toml_config": toml_config,  # Store parsed config
+                    }
+
+                else:  # json (legacy)
+                    with open(config_path, encoding="utf-8") as f:
+                        agent_metadata = json.load(f)
+
+                    agent_metadata["directory"] = str(agent_dir)
+                    agent_metadata["mcp_config_path"] = str(agent_dir / "mcp.json")
+                    agent_metadata["config_type"] = "json"
 
                 agent_name = agent_metadata.get("name", agent_dir.name)
-                agent_metadata["directory"] = str(agent_dir)
-                agent_metadata["mcp_config_path"] = str(agent_dir / "mcp.json")
-
                 self.discovered_agents[agent_name] = agent_metadata
-                logger.info(f"Discovered agent: {agent_name}")
+                logger.info(f"Discovered agent: {agent_name} ({config_type} format)")
 
             except Exception as e:
-                logger.error(f"Failed to load agent metadata from {agent_json_path}: {e}")
+                logger.error(f"Failed to load agent metadata from {config_path}: {e}")
 
         return self.discovered_agents
 
@@ -264,3 +305,127 @@ class ATOLLAgentManager:
         # Disconnect MCP manager
         if context.mcp_manager:
             await context.mcp_manager.disconnect_all()
+
+        logger.info(f"Shutdown agent: {context.name}")
+
+    def _create_agents_directory(self) -> None:
+        """Create the agents directory with README and optional example agents."""
+        try:
+            # Create the directory
+            self.agents_directory.mkdir(parents=True, exist_ok=True)
+
+            # Create README.md
+            readme_path = self.agents_directory / "README.md"
+            if not readme_path.exists():
+                readme_content = """# ATOLL Agent Plugins
+
+This directory contains specialized ATOLL agent plugins that extend the capabilities of the base ATOLL system.
+
+## Quick Start
+
+To add a specialized agent:
+
+1. Copy an agent directory (e.g., from the ATOLL repository's `atoll_agents/` folder)
+2. Each agent needs:
+   - `agent.json` - Metadata file
+   - `{module}.py` - Python implementation
+   - Optional: `mcp.json` - MCP server configuration
+
+## Example: Ghidra Agent
+
+If you want to use the Ghidra reverse engineering agent:
+
+```bash
+# Copy the example from the ATOLL repository
+cp -r <atoll-repo>/atoll_agents/ghidra_agent ./atoll_agents/
+```
+
+## Structure
+
+```
+atoll_agents/
+├── README.md (this file)
+└── my_agent/
+    ├── agent.json
+    ├── my_agent.py
+    └── mcp.json (optional)
+```
+
+### agent.json Format
+
+```json
+{
+  "name": "MyAgent",
+  "version": "1.0.0",
+  "module": "my_agent",
+  "class": "MyAgent",
+  "description": "Description of what this agent does",
+  "capabilities": ["capability1", "capability2"],
+  "supported_mcp_servers": ["server1", "server2"]
+}
+```
+
+### Python Module Requirements
+
+```python
+from atoll.plugins.base import ATOLLAgent
+
+class MyAgent(ATOLLAgent):
+    def __init__(self, name: str, version: str):
+        super().__init__(name, version)
+
+    async def process(self, prompt: str, context: dict) -> dict:
+        # Your agent logic here
+        return {"response": "...", "reasoning": [...]}
+
+    def get_capabilities(self) -> list[str]:
+        return ["capability1", "capability2"]
+
+    def get_supported_mcp_servers(self) -> list[str]:
+        return ["server1", "server2"]
+```
+
+## Available Example Agents
+
+Check the ATOLL repository for example agents:
+- **ghidra_agent**: Binary analysis and decompilation using Ghidra MCP server
+
+## More Information
+
+See the ATOLL documentation for detailed information on creating custom agents:
+https://github.com/Buttje/ATOLL/tree/main/docs
+"""
+                readme_path.write_text(readme_content, encoding="utf-8")
+                logger.info(f"Created README at {readme_path}")
+
+            # Try to copy example agents from installation if available
+            try:
+                # Find the source atoll_agents directory in the repository
+                # This would be at the same level as the package installation
+                source_agents_dir = self.agents_directory.parent / "atoll_agents_examples"
+
+                # If we're in a development environment, look for the repo structure
+                if not source_agents_dir.exists():
+                    # Try finding it relative to package
+                    import atoll
+
+                    repo_root = Path(atoll.__file__).parent.parent.parent
+                    source_agents_dir = repo_root / "atoll_agents"
+
+                if source_agents_dir.exists():
+                    # Copy ghidra_agent as example if it exists
+                    ghidra_agent_src = source_agents_dir / "ghidra_agent"
+                    ghidra_agent_dst = self.agents_directory / "ghidra_agent.example"
+
+                    if ghidra_agent_src.exists() and not ghidra_agent_dst.exists():
+                        shutil.copytree(ghidra_agent_src, ghidra_agent_dst)
+                        logger.info(f"Copied example agent to {ghidra_agent_dst}")
+                        logger.info(
+                            "Rename 'ghidra_agent.example' to 'ghidra_agent' to activate it"
+                        )
+            except Exception as e:
+                # Silently skip if we can't find/copy examples
+                logger.debug(f"Could not copy example agents: {e}")
+
+        except Exception as e:
+            logger.error(f"Failed to create agents directory: {e}")

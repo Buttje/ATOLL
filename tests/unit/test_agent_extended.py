@@ -1,6 +1,6 @@
 """Extended unit tests for agent module to improve coverage."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -37,6 +37,9 @@ class TestOllamaMCPAgentExtended:
         mock_llm = Mock()
         mock_llm.invoke = Mock(return_value="response with tools")
         agent.llm = mock_llm
+
+        # Mock reasoning engine
+        agent.reasoning_engine.analyze = AsyncMock(return_value=[])
 
         result = await agent.process_prompt("test")
         assert result == "response with tools"
@@ -84,6 +87,9 @@ class TestOllamaMCPAgentExtended:
         mock_llm = Mock()
         mock_llm.invoke = Mock(return_value="")
         agent.llm = mock_llm
+
+        # Mock reasoning engine
+        agent.reasoning_engine.analyze = AsyncMock(return_value=[])
 
         result = await agent.process_prompt("test")
         assert result == ""

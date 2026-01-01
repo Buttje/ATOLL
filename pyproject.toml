@@ -35,7 +35,7 @@ dependencies = [
     "aiohttp>=3.9.0",
     "colorama>=0.4.6",
     "jsonschema>=4.20.0",
-    "pydantic>=2.5.0",
+    "pydantic>=2.6.0",
     "prompt-toolkit>=3.0.0",
 ]
 
@@ -90,6 +90,11 @@ addopts = "-v --tb=short"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::RuntimeWarning:unittest.mock",
+    # Ignore warnings from pytest garbage collection of mock coroutines
+    "ignore:coroutine.*was never awaited:RuntimeWarning",
+    # Ignore asyncio pipe closure warnings during test cleanup
+    "ignore:Exception ignored.*_ProactorBasePipeTransport:pytest.PytestUnraisableExceptionWarning",
+    "ignore:Exception ignored.*BaseSubprocessTransport:pytest.PytestUnraisableExceptionWarning",
 ]
 
 [tool.ruff]

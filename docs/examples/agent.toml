@@ -1,0 +1,96 @@
+# ATOLL Agent Configuration (TOML Format)
+# This format replaces the previous agent.json + mcp.json combination
+
+# ============================================================================
+# Agent Metadata
+# ============================================================================
+[agent]
+name = "GhidraAgent"
+version = "1.0.0"
+description = "Specialized agent for binary analysis using Ghidra"
+author = "ATOLL Team"
+license = "MIT"
+capabilities = ["binary_analysis", "decompilation", "reverse_engineering"]
+
+# ============================================================================
+# LLM Configuration (Optional Overrides)
+# ============================================================================
+# If specified, these settings override the parent agent's LLM configuration
+# If omitted, the parent agent's settings are used
+[llm]
+model = "codellama:7b"  # Use CodeLlama for code analysis
+temperature = 0.3  # Lower temperature for more deterministic code analysis
+# top_p = 0.9  # Uncomment to override
+# max_tokens = 4096  # Uncomment to override
+# request_timeout = 60  # Uncomment to override
+
+# Optional: Custom system prompt for this agent
+system_prompt = """You are a specialized binary analysis agent with expertise in:
+- Decompiling binaries using Ghidra
+- Analyzing assembly code and functions
+- Identifying vulnerabilities in compiled code
+- Reverse engineering malware and exploits
+
+Use Ghidra MCP tools to analyze binaries and provide detailed insights."""
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+[dependencies]
+python = ">=3.9"
+packages = [
+    "pydantic>=2.0",
+    "aiohttp>=3.9",
+]
+
+# ============================================================================
+# Resource Limits
+# ============================================================================
+# Optional resource constraints for this agent when deployed
+[resources]
+cpu_limit = 2.0  # CPU cores (2.0 = 2 full cores)
+memory_limit = "4GB"  # Memory limit
+timeout = 300  # Request timeout in seconds (5 minutes for complex analysis)
+
+# ============================================================================
+# MCP Servers
+# ============================================================================
+# MCP servers specific to this agent
+# Syntax: [mcp_servers.<server_name>]
+
+[mcp_servers.ghidramcp]
+type = "stdio"
+command = "python"
+args = ["-m", "ghidra_mcp_server"]
+env = { GHIDRA_INSTALL_DIR = "$HOME/ghidra_11.0" }
+
+[mcp_servers.binutils]
+type = "stdio"
+command = "node"
+args = ["binutils-server.js"]
+
+# ============================================================================
+# Sub-Agents (Hierarchical Distributed Mode)
+# ============================================================================
+# Configuration for child agents in distributed deployment
+# Syntax: [sub_agents.<agent_name>]
+
+# Example: Two instances of a specialized sub-agent for load balancing
+[sub_agents.decompiler-1]
+url = "http://agent-server-1:8000"
+auth_token = "$DECOMPILER_TOKEN"  # Environment variable
+health_check_interval = 30  # Seconds
+
+[sub_agents.decompiler-2]
+url = "http://agent-server-2:8000"
+auth_token = "$DECOMPILER_TOKEN"
+health_check_interval = 30
+
+# ============================================================================
+# Notes:
+# ============================================================================
+# - Environment variables in string values are expanded using $VAR or ${VAR}
+# - The [llm] section is entirely optional - omit it to use parent settings
+# - Each agent can have its own MCP servers independent of the parent
+# - Sub-agents are only used in distributed deployment mode
+# - Resource limits are enforced by the deployment server using cgroups/jobs

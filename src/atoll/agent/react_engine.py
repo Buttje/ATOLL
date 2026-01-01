@@ -1,11 +1,10 @@
 """ReAct (Reasoning + Action) reasoning engine implementation."""
 
 import asyncio
-import json
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from ..utils.logger import get_logger
 
@@ -174,8 +173,7 @@ class ReActEngine:
                 # Truncate observation if needed
                 if len(observation) > self.config.max_observation_length:
                     observation = (
-                        observation[: self.config.max_observation_length]
-                        + "... [truncated]"
+                        observation[: self.config.max_observation_length] + "... [truncated]"
                     )
 
                 obs_step = ReActStep(
@@ -200,7 +198,9 @@ class ReActEngine:
 You have access to the following tools:"""
 
         for tool in tools:
-            context += f"\n- {tool.get('name', 'unknown')}: {tool.get('description', 'No description')}"
+            context += (
+                f"\n- {tool.get('name', 'unknown')}: {tool.get('description', 'No description')}"
+            )
 
         context += """
 
@@ -271,7 +271,7 @@ Remember:
     async def _execute_action(self, tool_name: str, tool_input: str) -> str:
         """Execute a tool action."""
         if not self.tool_executor:
-            return f"Error: No tool executor configured"
+            return "Error: No tool executor configured"
 
         try:
             # Execute with timeout

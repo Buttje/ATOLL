@@ -58,6 +58,9 @@ class TestIntegration:
                         await asyncio.wait_for(app.startup(), timeout=5.0)
                     except asyncio.TimeoutError:
                         pytest.fail("Application startup timed out")
+                    finally:
+                        # Ensure proper cleanup
+                        await app.shutdown()
 
                     assert app.agent is not None
                     assert app.mcp_manager is not None
@@ -96,13 +99,17 @@ class TestIntegration:
                 with patch.object(
                     app, "_wait_for_startup_confirmation", new_callable=AsyncMock, return_value=True
                 ):
-                    # Start the application
-                    await app.startup()
+                    try:
+                        # Start the application
+                        await app.startup()
 
-                    # Process a prompt
-                    with (
-                        patch.object(app.ui, "display_user_input"),
-                        patch.object(app.ui, "display_response"),
-                    ):
-                        result = await app.agent.process_prompt("Test prompt")
-                        assert result is not None
+                        # Process a prompt
+                        with (
+                            patch.object(app.ui, "display_user_input"),
+                            patch.object(app.ui, "display_response"),
+                        ):
+                            result = await app.agent.process_prompt("Test prompt")
+                            assert result is not None
+                    finally:
+                        # Ensure proper cleanup
+                        await app.shutdown()

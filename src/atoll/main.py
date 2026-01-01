@@ -7,9 +7,11 @@ import warnings
 from pathlib import Path
 from typing import Optional
 
-from .agent.agent import OllamaMCPAgent
 from .agent.agent_manager import ATOLLAgentManager
+from .agent.reasoning import ReasoningEngine
+from .agent.root_agent import RootAgent
 from .config.manager import ConfigManager
+from .deployment.server import DeploymentServer, DeploymentServerConfig
 from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
 from .ui.terminal import TerminalUI, UIMode
@@ -28,9 +30,11 @@ class Application:
         self.config_manager = ConfigManager()
         self.ui = TerminalUI()
         self.colors = ColorScheme()
-        self.agent: Optional[OllamaMCPAgent] = None
+        self.agent: Optional[RootAgent] = None
         self.mcp_manager: Optional[MCPServerManager] = None
         self.agent_manager: Optional[ATOLLAgentManager] = None
+        self.reasoning_engine: Optional[ReasoningEngine] = None
+        self.deployment_server: Optional[DeploymentServer] = None
         self.command_history: list[str] = []
 
     async def startup(self) -> None:
@@ -46,15 +50,40 @@ class Application:
         # Create MCP manager (needed for agent initialization)
         self.mcp_manager = MCPServerManager(self.config_manager.mcp_config, ui=self.ui)
 
-        # Create agent with MCP manager
-        self.agent = OllamaMCPAgent(
-            ollama_config=self.config_manager.ollama_config,
+        # Create reasoning engine
+        from langchain_ollama import OllamaLLM
+
+        temp_llm = OllamaLLM(
+            base_url=f"{self.config_manager.ollama_config.base_url}:{self.config_manager.ollama_config.port}",
+            model=self.config_manager.ollama_config.model,
+        )
+        self.reasoning_engine = ReasoningEngine(temp_llm)
+        self.reasoning_engine.set_mcp_manager(self.mcp_manager)
+
+        # Create root agent (inherits from ATOLLAgent)
+        self.agent = RootAgent(
+            name="Main",
+            version="2.0.0",
+            llm_config=self.config_manager.ollama_config,
             mcp_manager=self.mcp_manager,
             ui=self.ui,
         )
+        self.agent.set_reasoning_engine(self.reasoning_engine)
 
         # Test Ollama server connection
-        server_reachable = await self.agent.check_server_connection()
+        import aiohttp
+
+        url = f"{self.config_manager.ollama_config.base_url}:{self.config_manager.ollama_config.port}/api/tags"
+        server_reachable = False
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+            ):
+                server_reachable = response.status == 200
+        except Exception:
+            pass
+
         if server_reachable:
             print(
                 self.colors.answer_text(
@@ -63,7 +92,18 @@ class Application:
             )
 
             # Check model availability
-            model_available = await self.agent.check_model_available()
+            model_available = False
+            try:
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+                ):
+                    data = await response.json()
+                    models = [model["name"] for model in data.get("models", [])]
+                    model_available = self.config_manager.ollama_config.model in models
+            except Exception:
+                pass
+
             if model_available:
                 print(
                     self.colors.answer_text(
@@ -95,14 +135,29 @@ class Application:
         # Now connect to MCP servers (after Ollama is verified)
         await self.mcp_manager.connect_all()
 
-        # Recreate agent tools with connected MCP servers
-        self.agent.tools = self.agent._create_tools()
+        # Update agent tools with connected MCP servers
+        self.agent._update_tools()
 
-        # Discover and load ATOLL agents
+        # Discover and load ATOLL agents from configured directory
         print(self.colors.info("Discovering ATOLL agents..."))
-        agents_dir = Path("atoll_agents")
+
+        # Get agents directory from config, or use default
+        if self.config_manager.atoll_config and self.config_manager.atoll_config.agents_directory:
+            agents_dir = Path(self.config_manager.atoll_config.agents_directory)
+            print(self.colors.reasoning(f"  Using configured agents directory: {agents_dir}"))
+        else:
+            # Use package installation directory as default
+            import atoll
+
+            package_dir = Path(atoll.__file__).parent.parent
+            agents_dir = package_dir / "atoll_agents"
+            print(self.colors.reasoning(f"  Using default agents directory: {agents_dir}"))
+
         self.agent_manager = ATOLLAgentManager(agents_dir)
         await self.agent_manager.load_all_agents()
+
+        # Update reasoning engine with agent_manager reference
+        self.reasoning_engine.set_agent_manager(self.agent_manager)
 
         # Display discovered agents
         if self.agent_manager.loaded_agents:
@@ -117,12 +172,49 @@ class Application:
                 if metadata:
                     desc = metadata.get("description", "No description")
                     print(self.colors.reasoning(f"    {desc}"))
+                    capabilities = metadata.get("capabilities", [])
+                    if capabilities:
+                        print(self.colors.reasoning(f"    Capabilities: {', '.join(capabilities)}"))
                 if agent_context.mcp_manager:
                     servers = agent_context.mcp_manager.list_servers()
                     if servers:
                         print(self.colors.reasoning(f"    MCP Servers: {', '.join(servers)}"))
         else:
-            print(self.colors.reasoning("  No ATOLL agents detected"))
+            print(self.colors.reasoning("  No ATOLL agents found in directory"))
+
+        # Start deployment server with validation
+        print(self.colors.info("Starting deployment server..."))
+
+        # Load deployment configuration from file
+        deployment_config = self.config_manager.deployment_config
+        if deployment_config and deployment_config.agents_directory is None:
+            # Set agents directory if not configured
+            deployment_config.agents_directory = agents_dir
+        elif deployment_config is None:
+            # Fallback to default if config wasn't loaded
+            deployment_config = DeploymentServerConfig(
+                enabled=True,
+                host="localhost",
+                base_port=8100,
+                auto_discover_port=True,
+                agents_directory=agents_dir,
+            )
+
+        self.deployment_server = DeploymentServer(deployment_config)
+
+        # Validate local deployment server BEFORE starting
+        success, message, port = await self.deployment_server.validate_local_server()
+        if not success:
+            print(self.colors.error(f"✗ Local deployment server validation failed: {message}"))
+            print(self.colors.error("\nExiting ATOLL due to deployment server failure."))
+            sys.exit(1)
+
+        # Start the server
+        await self.deployment_server.start()
+
+        # Generate and display comprehensive startup report
+        startup_report = await self.deployment_server.generate_startup_report()
+        print(startup_report)
 
         print(self.colors.final_response("✓ Startup complete!"))
         print()
@@ -178,8 +270,8 @@ class Application:
                         self.ui.toggle_mode()
                         continue
 
-                    # Check for Ctrl+V key
-                    if user_input == "CTRL_V":
+                    # Check for Ctrl+B key
+                    if user_input == "CTRL_B":
                         self.ui.toggle_verbose()
                         continue
 
@@ -207,6 +299,8 @@ class Application:
     async def shutdown(self) -> None:
         """Perform cleanup on shutdown."""
         try:
+            if self.deployment_server:
+                await self.deployment_server.stop()
             if self.agent_manager:
                 await self.agent_manager.shutdown_all()
             if self.mcp_manager:
@@ -315,6 +409,34 @@ class Application:
         elif cmd == "back":
             await self.handle_back_command()
 
+        elif cmd == "deploy":
+            if len(parts) >= 2:
+                agent_name = parts[1]  # Preserve case
+                await self.handle_deploy_command(agent_name)
+            else:
+                self.ui.display_error("Usage: deploy <agent-name>")
+
+        elif cmd == "undeploy":
+            if len(parts) >= 2:
+                agent_name = parts[1]  # Preserve case
+                await self.handle_undeploy_command(agent_name)
+            else:
+                self.ui.display_error("Usage: undeploy <agent-name>")
+
+        elif cmd == "restart":
+            if len(parts) >= 2:
+                agent_name = parts[1]  # Preserve case
+                await self.handle_restart_command(agent_name)
+            else:
+                self.ui.display_error("Usage: restart <agent-name>")
+
+        elif cmd == "status":
+            if len(parts) >= 2:
+                agent_name = parts[1]  # Preserve case
+                await self.handle_status_command(agent_name)
+            else:
+                self.ui.display_error("Usage: status <agent-name>")
+
         else:
             self.ui.display_error(f"Unknown command: '{cmd}'. Type 'help' for available commands.")
 
@@ -340,7 +462,7 @@ ATOLL - Agent Commands ({self.agent_manager.current_context.name}):
 Navigation:
 -----------
   ESC                     - Toggle between Prompt and Command mode
-  Ctrl+V                  - Toggle verbose output mode
+  Ctrl+B                  - Toggle verbose output mode
   Ctrl+C                  - Exit ATOLL
 
 Prompt Mode:
@@ -360,11 +482,22 @@ ATOLL - Available Commands:
   list agents             - List available ATOLL agents
   list mcp                - List connected MCP servers
   list tools              - List available MCP tools
+  list deployment         - List deployment server agent instances
   changemodel <name>      - Switch to a different Ollama model
   setserver <url> [port]  - Configure Ollama server connection
   switchto <agent>        - Switch to an ATOLL agent context
+  deploy <agent>          - Deploy an agent instance on deployment server
+  undeploy <agent>        - Stop a deployed agent instance
   clear                   - Clear conversation memory
   quit                    - Exit ATOLL
+
+Deployment Commands:
+--------------------
+  list deployment         - Show all agent instances on deployment server
+  deploy <agent>          - Start an agent instance
+  undeploy <agent>        - Stop an agent instance
+  restart <agent>         - Restart an agent instance
+  status <agent>          - Show detailed status of an agent instance
 
 Legacy Commands (deprecated, use 'list' instead):
 -------------------------------------------------
@@ -375,7 +508,7 @@ Legacy Commands (deprecated, use 'list' instead):
 Navigation:
 -----------
   ESC                     - Toggle between Prompt and Command mode
-  Ctrl+V                  - Toggle verbose output mode
+  Ctrl+B                  - Toggle verbose output mode
   Ctrl+C                  - Exit ATOLL
 
 Prompt Mode:
@@ -860,9 +993,61 @@ Example:
                 print(self.colors.warning(f"\nNo tools available in {context_name} context"))
             print()
 
+        elif list_type == "deployment":
+            # List managed agent instances
+            if not self.deployment_server or not self.deployment_server.running:
+                print(self.colors.warning("\nDeployment server is not running"))
+                print()
+                return
+
+            instances = self.deployment_server.list_agents()
+            if instances:
+                print(self.colors.info(f"\nManaged Agent Instances ({len(instances)} total):"))
+                print(
+                    self.colors.user_input(
+                        f"  {'Agent Name':<20} {'Status':<12} {'Port':<8} {'PID':<10} {'Health':<10} {'Restarts':<10}"
+                    )
+                )
+                print(self.colors.user_input("  " + "-" * 80))
+
+                for instance in instances:
+                    status_color = (
+                        self.colors.answer_text
+                        if instance["status"] == "running"
+                        else self.colors.error
+                        if instance["status"] == "stopped"
+                        else self.colors.warning
+                    )
+                    name = instance["name"][:20]
+                    status = instance["status"][:12]
+                    port = str(instance.get("port", "N/A"))[:8]
+                    pid = str(instance.get("pid", "N/A"))[:10]
+                    health = instance.get("health", "unknown")[:10]
+                    restarts = str(instance.get("restart_count", 0))[:10]
+
+                    print(
+                        status_color(
+                            f"  {name:<20} {status:<12} {port:<8} {pid:<10} {health:<10} {restarts:<10}"
+                        )
+                    )
+                print()
+                print(
+                    self.colors.info(
+                        "Use 'status <agent-name>' for detailed information on specific agent"
+                    )
+                )
+            else:
+                print(self.colors.warning("\nNo agent instances currently managed"))
+                print(
+                    self.colors.info(
+                        "Use 'deploy <agent-name>' to start managing an agent instance"
+                    )
+                )
+            print()
+
         else:
             self.ui.display_error(f"Unknown list type: '{list_type}'")
-            self.ui.display_info("Usage: list <server|models|agents|mcp|tools>")
+            self.ui.display_info("Usage: list <server|models|agents|mcp|tools|deployment>")
 
     async def handle_switchto_command(self, agent_name: str) -> None:
         """Handle switchto command to enter agent context."""
@@ -952,9 +1137,119 @@ Example:
             )
 
     async def handle_prompt(self, prompt: str) -> None:
-        """Handle prompt mode input."""
+        """Handle prompt mode input.
+
+        Routes the prompt to the current agent context (if switched) or
+        to the root agent (if at top level).
+        """
         if prompt.strip():
-            await self.agent.process_prompt(prompt)
+            # FR-H009: Route to current agent context
+            if self.agent_manager and self.agent_manager.current_context:
+                # User has switched to a sub-agent - use that agent
+                await self.agent_manager.current_context.agent.process_prompt(prompt)
+            else:
+                # At top level - use root agent
+                await self.agent.process_prompt(prompt)
+
+    async def handle_deploy_command(self, agent_name: str) -> None:
+        """Handle deploy command to start an agent instance.
+
+        Args:
+            agent_name: Name of the agent to deploy
+        """
+        if not self.deployment_server:
+            self.ui.display_error("Deployment server not available")
+            return
+
+        self.ui.display_info(f"Deploying agent: {agent_name}...")
+        success = await self.deployment_server.start_agent(agent_name)
+
+        if success:
+            status = self.deployment_server.get_agent_status(agent_name)
+            if status:
+                self.ui.display_info(f"✓ Agent {agent_name} deployed on port {status['port']}")
+        else:
+            self.ui.display_error(f"Failed to deploy agent: {agent_name}")
+
+    async def handle_undeploy_command(self, agent_name: str) -> None:
+        """Handle undeploy command to stop an agent instance.
+
+        Args:
+            agent_name: Name of the agent to undeploy
+        """
+        if not self.deployment_server:
+            self.ui.display_error("Deployment server not available")
+            return
+
+        self.ui.display_info(f"Stopping agent: {agent_name}...")
+        success = await self.deployment_server.stop_agent(agent_name)
+
+        if success:
+            self.ui.display_info(f"✓ Agent {agent_name} stopped")
+        else:
+            self.ui.display_error(f"Failed to stop agent: {agent_name}")
+
+    async def handle_restart_command(self, agent_name: str) -> None:
+        """Handle restart command to restart an agent instance.
+
+        Args:
+            agent_name: Name of the agent to restart
+        """
+        if not self.deployment_server:
+            self.ui.display_error("Deployment server not available")
+            return
+
+        self.ui.display_info(f"Restarting agent: {agent_name}...")
+        success = await self.deployment_server.restart_agent(agent_name)
+
+        if success:
+            status = self.deployment_server.get_agent_status(agent_name)
+            if status:
+                self.ui.display_info(f"✓ Agent {agent_name} restarted on port {status['port']}")
+        else:
+            self.ui.display_error(f"Failed to restart agent: {agent_name}")
+
+    async def handle_status_command(self, agent_name: str) -> None:
+        """Handle status command to show detailed agent status.
+
+        Args:
+            agent_name: Name of the agent to check
+        """
+        if not self.deployment_server:
+            self.ui.display_error("Deployment server not available")
+            return
+
+        status = self.deployment_server.get_agent_status(agent_name)
+
+        if not status:
+            self.ui.display_error(f"Agent not found: {agent_name}")
+            return
+
+        # Display status information
+        self.ui.display_info(f"\nAgent Status: {agent_name}")
+        print(self.colors.reasoning("=" * 50))
+        print(self.colors.user_input(f"Status: {status['status']}"))
+        print(self.colors.user_input(f"Health: {status['health_status']}"))
+
+        if status["pid"]:
+            print(self.colors.user_input(f"PID: {status['pid']}"))
+
+        if status["port"]:
+            print(self.colors.user_input(f"Port: {status['port']}"))
+            print(self.colors.reasoning(f"URL: http://localhost:{status['port']}"))
+
+        if status["start_time"]:
+            print(self.colors.user_input(f"Started: {status['start_time']}"))
+
+        print(self.colors.user_input(f"Restarts: {status['restart_count']}"))
+
+        if status["last_health_check"]:
+            print(self.colors.user_input(f"Last Health Check: {status['last_health_check']}"))
+
+        if status["error_message"]:
+            print(self.colors.error(f"Error: {status['error_message']}"))
+
+        print(self.colors.reasoning("=" * 50))
 
 
 def get_version() -> str:

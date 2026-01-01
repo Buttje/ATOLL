@@ -150,6 +150,12 @@ class MCPClient:
                 # Close all pipes after process is terminated
                 if self.process.stdin and not self.process.stdin.is_closing():
                     self.process.stdin.close()
+                    # Wait for stdin to close
+                    try:
+                        await asyncio.wait_for(self.process.stdin.wait_closed(), timeout=1.0)
+                    except (asyncio.TimeoutError, AttributeError):
+                        pass
+
                 if self.process.stdout and not self.process.stdout.at_eof():
                     self.process.stdout.feed_eof()
                 if self.process.stderr and not self.process.stderr.at_eof():

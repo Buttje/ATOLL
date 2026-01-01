@@ -1,12 +1,12 @@
 """Validation utilities."""
 
 import json
-from typing import Any, Dict
-from pathlib import Path
+from typing import Any
+
 import jsonschema
 
 
-def validate_config(config: Dict[str, Any], schema: Dict[str, Any]) -> bool:
+def validate_config(config: dict[str, Any], schema: dict[str, Any]) -> bool:
     """Validate configuration against schema."""
     try:
         jsonschema.validate(instance=config, schema=schema)
@@ -20,7 +20,7 @@ def validate_tool_response(response: Any) -> bool:
     """Validate tool response format."""
     if response is None:
         return False
-    
+
     # Check if response is serializable
     try:
         json.dumps(response)

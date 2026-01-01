@@ -1,7 +1,8 @@
 """Tests for ReAct reasoning engine."""
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, Mock
 
 from atoll.agent.react_engine import (
     ReActConfig,
@@ -131,6 +132,7 @@ Final Answer: Python is a high-level programming language"""
     @pytest.mark.asyncio
     async def test_run_single_iteration(self):
         """Test ReAct run with single iteration to final answer."""
+
         # Mock LLM that returns final answer immediately
         async def mock_llm(prompt):
             return """Thought: I can answer this directly

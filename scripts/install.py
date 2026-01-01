@@ -8,6 +8,83 @@ import sys
 from pathlib import Path
 
 
+def get_agents_directory():
+    """Ask user for ATOLL agents directory location."""
+    print("\n" + "=" * 60)
+    print("ATOLL Agents Directory Configuration")
+    print("=" * 60)
+    print("\nATOLL agents are specialized plugins that extend capabilities.")
+    print("You can store them in a custom location for easier management.")
+    print("\nOptions:")
+    print("  1. Use default location (package installation directory)")
+    print("  2. Specify a custom directory path")
+    print()
+
+    while True:
+        choice = input("Enter your choice (1 or 2): ").strip()
+        if choice == "1":
+            return None  # None means use default
+        elif choice == "2":
+            while True:
+                path = input("\nEnter the full path for agents directory: ").strip()
+                if not path:
+                    print("Path cannot be empty. Please try again.")
+                    continue
+
+                # Expand user path (~ on Unix)
+                path = os.path.expanduser(path)
+                agents_path = Path(path)
+
+                # Ask if user wants to create it if it doesn't exist
+                if not agents_path.exists():
+                    create = (
+                        input(f"Directory '{agents_path}' does not exist. Create it? (y/n): ")
+                        .strip()
+                        .lower()
+                    )
+                    if create == "y":
+                        try:
+                            agents_path.mkdir(parents=True, exist_ok=True)
+                            print(f"[OK] Created directory: {agents_path}")
+                            return str(agents_path)
+                        except Exception as e:
+                            print(f"[ERROR] Failed to create directory: {e}")
+                            continue
+                    else:
+                        continue
+                else:
+                    print(f"[OK] Using directory: {agents_path}")
+                    return str(agents_path)
+        else:
+            print("Invalid choice. Please enter 1 or 2.")
+
+
+def save_agents_config(agents_dir):
+    """Save agents directory configuration."""
+    config_dir = Path.home() / ".atoll"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "atoll.json"
+
+    config = {}
+    if config_path.exists():
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+        except:
+            pass
+
+    config["agents_directory"] = agents_dir
+
+    try:
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+        print(f"[OK] Saved agents configuration to {config_path}")
+        return True
+    except Exception as e:
+        print(f"[WARNING] Could not save agents config: {e}")
+        return False
+
+
 def create_default_configs():
     """Create default configuration files if they don't exist."""
     # Create ~/.atoll directory and mcp.json if they don't exist
@@ -71,6 +148,11 @@ def main():
     # Create default configuration files
     print("\nChecking configuration files...")
     create_default_configs()
+
+    # Ask for agents directory location
+    agents_dir = get_agents_directory()
+    if agents_dir:
+        save_agents_config(agents_dir)
 
     # Check if venv already exists and is functional
     venv_path = Path("venv")

@@ -87,7 +87,7 @@ engine = ReActEngine(config=config, tool_executor=my_executor)
 No way to extend ATOLL with specialized agents without modifying core code. Each domain (binary analysis, data science, etc.) requires specialized reasoning.
 
 ### Solution: ATOLLAgent Plugin System
-**Modules**: 
+**Modules**:
 - `src/atoll/plugins/base.py` - Base class
 - `src/atoll/plugins/manager.py` - Discovery and lifecycle
 
@@ -105,15 +105,15 @@ class ATOLLAgent(ABC):
     @abstractmethod
     async def process(prompt, context) -> dict:
         """Process a prompt with specialized capabilities."""
-        
+
     @abstractmethod
     def get_capabilities() -> list[str]:
         """Return list of capabilities."""
-        
+
     @abstractmethod
     def get_supported_mcp_servers() -> list[str]:
         """Return list of supported MCP servers."""
-        
+
     def can_handle(prompt, context) -> float:
         """Return confidence score 0.0-1.0."""
 ```

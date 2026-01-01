@@ -8,12 +8,9 @@ import platform
 import re
 import shutil
 import subprocess
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Optional
 from urllib.parse import urlparse
-
-import aiohttp
 
 from ..config.models import MCPConfig, MCPServerConfig
 from ..ui.terminal import TerminalUI
@@ -104,7 +101,7 @@ class MCPInstaller:
             True if Node.js is now available, False otherwise
         """
         self.ui.display_info("Node.js is required for this MCP server")
-        
+
         if self.os_type == "Windows":
             self.ui.display_info("Install Node.js from: https://nodejs.org/en/download/")
             self.ui.display_info("Or use winget: winget install OpenJS.NodeJS")
@@ -121,11 +118,13 @@ class MCPInstaller:
                 self.ui.display_info("Install with Homebrew: brew install node")
             else:
                 self.ui.display_info("Install Node.js from: https://nodejs.org/en/download/")
-        
-        response = input("Press Enter after installation completes, or 'skip' to cancel: ").strip().lower()
+
+        response = (
+            input("Press Enter after installation completes, or 'skip' to cancel: ").strip().lower()
+        )
         if response == "skip":
             return False
-        
+
         return self._check_nodejs_installed()
 
     async def _install_pnpm(self) -> bool:
@@ -137,19 +136,16 @@ class MCPInstaller:
         if not self._check_nodejs_installed():
             self.ui.display_error("Node.js is required to install pnpm")
             return False
-        
+
         self.ui.display_info("Installing pnpm globally...")
-        
+
         try:
             if self._check_npm_installed():
                 # Install pnpm using npm
                 result = subprocess.run(
-                    "npm install -g pnpm",
-                    shell=True,
-                    capture_output=True,
-                    text=True
+                    "npm install -g pnpm", shell=True, capture_output=True, text=True
                 )
-                
+
                 if result.returncode == 0:
                     self.ui.display_info("pnpm installed successfully")
                     return self._check_pnpm_installed()
@@ -159,7 +155,11 @@ class MCPInstaller:
             else:
                 self.ui.display_info("npm not found. Install pnpm manually:")
                 self.ui.display_info("  https://pnpm.io/installation")
-                response = input("Press Enter after installation completes, or 'skip' to cancel: ").strip().lower()
+                response = (
+                    input("Press Enter after installation completes, or 'skip' to cancel: ")
+                    .strip()
+                    .lower()
+                )
                 if response == "skip":
                     return False
                 return self._check_pnpm_installed()
@@ -206,7 +206,9 @@ class MCPInstaller:
         response = input("Install container runtime? (yes/no) [yes]: ").strip().lower()
 
         if response in ["", "yes", "y"]:
-            runtime_choice = input("Choose runtime to install (docker/podman) [podman]: ").strip().lower()
+            runtime_choice = (
+                input("Choose runtime to install (docker/podman) [podman]: ").strip().lower()
+            )
             runtime = "podman" if runtime_choice in ["", "podman"] else "docker"
 
             self.ui.display_info(f"Installing {runtime}...")
@@ -233,12 +235,16 @@ class MCPInstaller:
     async def _install_container_runtime_windows(self, runtime: str) -> bool:
         """Install container runtime on Windows."""
         if runtime == "podman":
-            self.ui.display_info("Please install Podman Desktop from: https://podman.io/getting-started/installation")
+            self.ui.display_info(
+                "Please install Podman Desktop from: https://podman.io/getting-started/installation"
+            )
             self.ui.display_info("Or use winget: winget install RedHat.Podman-Desktop")
             response = input("Press Enter after installation completes...")
             return self._check_command_exists("podman")
         else:
-            self.ui.display_info("Please install Docker Desktop from: https://www.docker.com/products/docker-desktop")
+            self.ui.display_info(
+                "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
+            )
             response = input("Press Enter after installation completes...")
             return self._check_command_exists("docker")
 
@@ -263,7 +269,9 @@ class MCPInstaller:
             return result.returncode == 0
         else:
             self.ui.display_info("Installing Docker...")
-            self.ui.display_info("Please follow instructions at: https://docs.docker.com/engine/install/")
+            self.ui.display_info(
+                "Please follow instructions at: https://docs.docker.com/engine/install/"
+            )
             response = input("Press Enter after installation completes...")
             return self._check_command_exists("docker")
 
@@ -276,15 +284,19 @@ class MCPInstaller:
                     "brew install podman && podman machine init && podman machine start",
                     shell=True,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 return result.returncode == 0
             else:
-                self.ui.display_info("Please install Podman Desktop from: https://podman.io/getting-started/installation")
+                self.ui.display_info(
+                    "Please install Podman Desktop from: https://podman.io/getting-started/installation"
+                )
                 response = input("Press Enter after installation completes...")
                 return self._check_command_exists("podman")
         else:
-            self.ui.display_info("Please install Docker Desktop from: https://www.docker.com/products/docker-desktop")
+            self.ui.display_info(
+                "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
+            )
             response = input("Press Enter after installation completes...")
             return self._check_command_exists("docker")
 
@@ -305,7 +317,9 @@ class MCPInstaller:
             True if installation succeeded, False otherwise
         """
         try:
-            self.logger.info(f"Starting installation: source={source}, type={server_type}, name={name}")
+            self.logger.info(
+                f"Starting installation: source={source}, type={server_type}, name={name}"
+            )
             self.ui.display_info(f"Installing MCP server from: {source}")
 
             # Detect type if not specified
@@ -503,7 +517,7 @@ class MCPInstaller:
                 text=True,
             )
             self.ui.display_info(f"Repository cloned to: {target_dir}")
-            self.logger.info(f"Repository cloned successfully")
+            self.logger.info("Repository cloned successfully")
         except subprocess.CalledProcessError as e:
             self.ui.display_error(f"Failed to clone repository: {e.stderr}")
             self.logger.error(f"Git clone failed: {e.stderr}")
@@ -616,27 +630,27 @@ class MCPInstaller:
                 if script_path.exists() and os.access(script_path, os.X_OK):
                     self.logger.info(f"Found Unix setup script: {script}")
                     return script_path
-        
+
         return None
 
     def _clean_command_string(self, command: Optional[str]) -> Optional[str]:
         """Clean command string by removing markdown formatting and extra whitespace.
-        
+
         Args:
             command: Raw command string that may contain markdown formatting, or None
-            
+
         Returns:
             Cleaned command string, or None if input is None
         """
         if not command:
             return command
-            
+
         # Strip whitespace
         command = command.strip()
-        
+
         if not command:
             return command
-        
+
         # Remove markdown code block formatting
         # Handle multi-line code blocks (```command```)
         if command.startswith("```") and command.endswith("```"):
@@ -646,29 +660,48 @@ class MCPInstaller:
                 lines = command.split("\n", 1)
                 # Common language identifiers for code blocks
                 lang_identifiers = {
-                    'bash', 'sh', 'shell', 'zsh', 'fish',
-                    'python', 'python3', 'py',
-                    'javascript', 'js', 'node', 'typescript', 'ts',
-                    'powershell', 'ps1', 'cmd', 'batch',
-                    'go', 'rust', 'java', 'c', 'cpp', 'ruby', 'perl'
+                    "bash",
+                    "sh",
+                    "shell",
+                    "zsh",
+                    "fish",
+                    "python",
+                    "python3",
+                    "py",
+                    "javascript",
+                    "js",
+                    "node",
+                    "typescript",
+                    "ts",
+                    "powershell",
+                    "ps1",
+                    "cmd",
+                    "batch",
+                    "go",
+                    "rust",
+                    "java",
+                    "c",
+                    "cpp",
+                    "ruby",
+                    "perl",
                 }
                 # If first line is a known language identifier, skip it
                 if len(lines) > 1 and lines[0].lower() in lang_identifiers:
                     command = lines[1].strip()
-        
+
         # Iteratively remove wrapping characters (backticks and quotes)
         # Keep stripping until nothing changes
         prev_command = None
-        wrappers = ['`', '"', "'"]
+        wrappers = ["`", '"', "'"]
         while prev_command != command:
             prev_command = command
-            
+
             # Check each wrapper type
             for wrapper in wrappers:
                 if command.startswith(wrapper) and command.endswith(wrapper) and len(command) > 1:
                     command = command[1:-1].strip()
                     break
-        
+
         return command
 
     async def _extract_install_command(self, readme: Path, directory: Path) -> Optional[str]:
@@ -690,20 +723,23 @@ class MCPInstaller:
                     return str(setup_script)
                 else:
                     return f"./{setup_script.name}"
-            
+
             content = readme.read_text(encoding="utf-8", errors="ignore")
             self.logger.info(f"Analyzing README for {self.os_type} installation instructions")
 
             # Check for Node.js/npm/pnpm requirements
-            requires_nodejs = any(keyword in content.lower() for keyword in ["node", "npm", "pnpm", "yarn", "package.json"])
+            requires_nodejs = any(
+                keyword in content.lower()
+                for keyword in ["node", "npm", "pnpm", "yarn", "package.json"]
+            )
             requires_pnpm = "pnpm" in content.lower()
-            
+
             if requires_nodejs and not self._check_nodejs_installed():
                 self.ui.display_info("Node.js is required for this server")
                 if not await self._install_nodejs():
                     self.ui.display_error("Node.js installation cancelled or failed")
                     return None
-            
+
             if requires_pnpm and not self._check_pnpm_installed():
                 self.ui.display_info("pnpm package manager is required")
                 if not await self._install_pnpm():
@@ -713,7 +749,7 @@ class MCPInstaller:
             # Check if Docker/Podman container is an option
             has_docker_option = "docker" in content.lower() or "container" in content.lower()
             runtime = None
-            
+
             if has_docker_option:
                 runtime = await self._detect_container_runtime()
                 if not runtime:
@@ -725,11 +761,9 @@ class MCPInstaller:
                     self.logger.info(f"Using container runtime: {runtime}")
 
             # Build OS-specific prompt
-            os_name = {
-                "Windows": "Windows",
-                "Linux": "Linux",
-                "Darwin": "macOS"
-            }.get(self.os_type, self.os_type)
+            os_name = {"Windows": "Windows", "Linux": "Linux", "Darwin": "macOS"}.get(
+                self.os_type, self.os_type
+            )
 
             prompt = f"""Analyze this README and extract the COMPLETE installation sequence for {os_name}:
 
@@ -770,9 +804,7 @@ If no installation is needed, respond with: NONE"""
                 self.ui.display_error(
                     "Failed to analyze README with LLM. Please ensure a valid Ollama model is configured."
                 )
-                self.ui.display_info(
-                    "You can change the model with: changemodel <model-name>"
-                )
+                self.ui.display_info("You can change the model with: changemodel <model-name>")
                 return None
 
         except Exception as e:
@@ -790,10 +822,10 @@ If no installation is needed, respond with: NONE"""
             Command with resolved placeholders
         """
         self.logger.info("Resolving command placeholders")
-        
+
         # Use forward slashes and escape backslashes for regex replacement
-        dir_path = str(directory.absolute()).replace('\\', '/')
-        
+        dir_path = str(directory.absolute()).replace("\\", "/")
+
         # Common placeholder patterns
         placeholders = {
             r"{ABSOLUTE[_ ]PATH[_ ]TO[_ ]FILE[_ ]HERE}": dir_path,
@@ -823,16 +855,20 @@ If no installation is needed, respond with: NONE"""
 
         # If command changed, inform user
         if command != original_command:
-            self.ui.display_verbose(f"Resolved placeholders in command")
+            self.ui.display_verbose("Resolved placeholders in command")
             self.logger.info(f"Command before: {original_command}")
             self.logger.info(f"Command after: {command}")
 
         # Check for remaining unresolved placeholders
-        remaining_placeholders = re.findall(r'{[^}]+}|<[^>]+>|\$\{[^}]+\}', command)
+        remaining_placeholders = re.findall(r"{[^}]+}|<[^>]+>|\$\{[^}]+\}", command)
         if remaining_placeholders:
-            self.ui.display_info(f"Command contains placeholders: {', '.join(remaining_placeholders)}")
+            self.ui.display_info(
+                f"Command contains placeholders: {', '.join(remaining_placeholders)}"
+            )
             self.ui.display_info(f"Current command: {command}")
-            response = input("Please provide the complete command or press Enter to use as-is: ").strip()
+            response = input(
+                "Please provide the complete command or press Enter to use as-is: "
+            ).strip()
             if response:
                 command = response
 
@@ -853,11 +889,9 @@ If no installation is needed, respond with: NONE"""
             self.logger.info(f"Analyzing README for {self.os_type} server start command")
 
             # Build OS-specific prompt
-            os_name = {
-                "Windows": "Windows",
-                "Linux": "Linux",
-                "Darwin": "macOS"
-            }.get(self.os_type, self.os_type)
+            os_name = {"Windows": "Windows", "Linux": "Linux", "Darwin": "macOS"}.get(
+                self.os_type, self.os_type
+            )
 
             prompt = f"""Analyze this README and extract the command to START the MCP server on {os_name}:
 
@@ -928,9 +962,12 @@ Do not include any explanation, just the command.
                 if stderr:
                     stderr_text = stderr.decode()
                     self.logger.error(f"Installation failed: {stderr_text}")
-                    
+
                     # Provide actionable guidance based on error
-                    if "command not found" in stderr_text.lower() or "not recognized" in stderr_text.lower():
+                    if (
+                        "command not found" in stderr_text.lower()
+                        or "not recognized" in stderr_text.lower()
+                    ):
                         # Extract the missing command
                         if "pnpm" in stderr_text.lower():
                             self.ui.display_info("pnpm is not installed. Install it with:")
@@ -949,10 +986,14 @@ Do not include any explanation, just the command.
                             self.ui.display_info("git is not installed. Install from:")
                             self.ui.display_info("  https://git-scm.com/downloads")
                     elif "permission denied" in stderr_text.lower():
-                        self.ui.display_info("Permission denied. Try running with elevated privileges")
+                        self.ui.display_info(
+                            "Permission denied. Try running with elevated privileges"
+                        )
                         if self.os_type != "Windows":
-                            self.ui.display_info("  Or make the script executable: chmod +x <script>")
-                
+                            self.ui.display_info(
+                                "  Or make the script executable: chmod +x <script>"
+                            )
+
                 return False
 
         except Exception as e:

@@ -1,6 +1,6 @@
 """Unit tests for the agent module."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -51,6 +51,9 @@ class TestOllamaMCPAgent:
         mock_llm = Mock()
         mock_llm.invoke = Mock(return_value="Test response")
         agent.llm = mock_llm
+
+        # Mock the reasoning engine's analyze method
+        agent.reasoning_engine.analyze = AsyncMock(return_value=[])
 
         result = await agent.process_prompt("Test prompt")
 

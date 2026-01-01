@@ -61,7 +61,7 @@ class TerminalUI:
         )
         if self.mode == UIMode.COMMAND:
             print(self.colors.info("Type 'help' for available commands"))
-        print(self.colors.info("Press Ctrl+V to toggle verbose mode"))
+        print(self.colors.info("Press Ctrl+B to toggle verbose mode"))
         print(self.colors.header("=" * 60))
         print()
 
