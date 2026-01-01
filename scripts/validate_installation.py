@@ -169,8 +169,8 @@ def check_system_resources():
         # Check disk space - use current working directory's drive/mount
         # On Windows: Path.cwd().anchor returns 'C:\', 'D:\', etc.
         # On Unix: Path.cwd().anchor returns '/'
-        # This approach works on both platforms
-        check_path = Path.cwd().anchor if Path.cwd().anchor else Path.cwd()
+        # If anchor is somehow unavailable, fall back to current directory string
+        check_path = Path.cwd().anchor or str(Path.cwd())
         disk = psutil.disk_usage(check_path)
         disk_gb = disk.free / (1024**3)
         if disk_gb >= 10:
@@ -288,9 +288,11 @@ def validate_full():
 
     results = []
     for name, check_func in checks:
-        results.append(check_func())
+        result = check_func()
+        # Treat None as failure to catch unexpected returns
+        results.append(result if result is True else False)
 
-    return all(r for r in results if r is not False)
+    return all(results)
 
 
 def main():
