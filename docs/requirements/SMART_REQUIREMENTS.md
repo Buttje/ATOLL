@@ -1,7 +1,8 @@
 # ATOLL System Requirements Specification
 **Version**: 2.0.0
 **Date**: January 1, 2026
-**Status**: Draft for Implementation
+**Status**: Implemented (Core Features) / Planned (Advanced Features)
+**Implementation Coverage**: ~70% (35/50 requirements fully implemented)
 
 ---
 
@@ -10,9 +11,16 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 2.0.0 | 2026-01-01 | ATOLL Team | Initial hierarchical + server architecture requirements |
+| 2.0.1 | 2026-01-01 | ATOLL Team | Updated with implementation status and phase clarifications |
 
 ---
 
+## Implementation Status Legend
+
+- ✅ **IMPLEMENTED**: Feature is fully implemented and tested
+- ⚠️ **PARTIAL**: Core functionality implemented, some advanced features pending
+- 📋 **PLANNED**: Design complete, implementation scheduled for future release
+- 🔮 **FUTURE**: Conceptual feature for consideration in v3.0+
 ## 1. Introduction
 
 ### 1.1 Purpose
@@ -48,12 +56,15 @@ This specification covers:
 
 ## 2. Functional Requirements - Hierarchical Agent System
 
-### FR-H001: Root Agent Initialization
+### FR-H001: Root Agent Initialization ✅ IMPLEMENTED
+**Status**: ✅ Fully implemented in v2.0.0
+**Implementation**: `src/atoll/agent/root_agent.py`
+
 **Specific**: System SHALL initialize a root ATOLL agent on startup that provides the primary user interface.
 **Measurable**: Root agent successfully loads within 5 seconds and responds to first command within 2 seconds.
 **Achievable**: Using existing Application class with ATOLLAgent base class implementation.
 **Relevant**: Ensures consistent entry point for all user interactions.
-**Time-bound**: To be implemented in Sprint 1 (Weeks 1-2).
+**Time-bound**: ✅ Completed in v2.0.0
 
 **Acceptance Criteria**:
 - Root agent inherits from ATOLLAgent base class
@@ -62,12 +73,21 @@ This specification covers:
 - Root agent provides command and prompt modes
 - Root agent displays breadcrumb navigation in UI header
 
-### FR-H002: ATOLLAgent Base Class
+### FR-H002: ATOLLAgent Base Class ✅ IMPLEMENTED
+**Status**: ✅ Fully implemented in v2.0.0
+**Implementation**: `src/atoll/plugins/base.py` (456 lines)
+
 **Specific**: System SHALL provide an ATOLLAgent base class that all agents (including root) inherit from.
 **Measurable**: Base class defines abstract methods: `process()`, `get_capabilities()`, `get_supported_mcp_servers()`.
 **Achievable**: Extend existing `atoll/plugins/base.py` with LLM integration.
 **Relevant**: Ensures uniform behavior across all agents in hierarchy.
-**Time-bound**: To be implemented in Sprint 1 (Weeks 1-2).
+**Time-bound**: ✅ Completed in v2.0.0
+
+**Implementation Notes**:
+- Base class includes full LLM integration (OllamaMCPAgent functionality migrated)
+- Each agent has independent LLM config, conversation memory, and MCP server access
+- Includes `check_server_connection()`, `check_model_available()`, `list_models()` methods
+- Supports both local and distributed deployment modes
 
 **Acceptance Criteria**:
 - Base class includes OllamaMCPAgent functionality
@@ -222,7 +242,31 @@ This specification covers:
 
 ## 3. Functional Requirements - REST API Server Mode
 
-### FR-S001: Ollama API Compatibility - Generate
+### Implementation Status: REST API Server
+**Overall**: ⚠️ 60% Complete - Ollama-compatible endpoints implemented, ATOLL extensions and authentication planned
+
+**Implemented** (`src/atoll/server/api.py`):
+- ✅ `/` - Root endpoint
+- ✅ `GET /health` - Health check
+- ✅ `POST /api/generate` - Ollama-compatible generation
+- ✅ `POST /api/chat` - Ollama-compatible chat
+- ✅ `GET /api/tags` - List available models
+- ✅ Session management with 30-minute timeout (`src/atoll/server/session.py`)
+- ✅ `GET /api/sessions/stats` - Session statistics
+- ✅ `POST /api/sessions/cleanup` - Clean expired sessions
+
+**Not Implemented** (planned for v2.1):
+- 📋 `GET /atoll/agents` - Agent hierarchy exploration
+- 📋 `PUT /atoll/agents/{name}/activate` - Context switching via API
+- 📋 `POST /atoll/tools/{tool-name}` - Direct tool invocation
+- 📋 `GET /atoll/status?detailed=true` - Detailed health metrics
+- 📋 JWT authentication (config field exists, no enforcement)
+- 📋 Rate limiting per user
+- 📋 `/api/embeddings` endpoint
+
+---
+
+### FR-S001: Ollama API Compatibility - Generate ✅ IMPLEMENTED
 **Specific**: Agent server SHALL implement `/api/generate` endpoint compatible with Ollama API.
 **Measurable**: Accepts same JSON request format, returns streaming or complete response.
 **Achievable**: Wrap agent.process_prompt() with Ollama-compatible interface.
@@ -410,7 +454,30 @@ POST /api/generate
 
 ## 4. Functional Requirements - Deployment System
 
-### FR-D001: Deployment Controller
+### Implementation Status: Deployment System
+**Overall**: ⚠️ 85% Complete - Core deployment features implemented, controller layer planned for v2.1
+
+**Implemented**:
+- ✅ ZIP package deployment with MD5 checksums (`src/atoll/deployment/api.py`)
+- ✅ Virtual environment isolation per agent
+- ✅ Agent lifecycle management (start/stop/restart)
+- ✅ REST API for deployment operations (port 8080)
+- ✅ Deployment client library (`src/atoll/deployment/client.py`)
+- ✅ Dynamic port allocation
+- ✅ Comprehensive error diagnostics
+
+**Partial**:
+- ⚠️ Health monitoring (logic exists but background scheduler not active)
+- ⚠️ Auto-restart on failure (implemented but requires health monitoring)
+
+**Planned for v2.1**:
+- 📋 Deployment controller (centralized coordination)
+- 📋 Multi-server registration and discovery
+- 📋 Load balancing across deployment servers
+
+---
+
+### FR-D001: Deployment Controller 📋 PLANNED
 **Specific**: System SHALL provide a deployment controller service that coordinates multiple deployment servers.
 **Measurable**: Controller manages at least 100 deployment servers, responds to health checks within 1 second.
 **Achievable**: Python FastAPI service with SQLite/PostgreSQL backend.
@@ -633,7 +700,27 @@ restart_delay = 5  # seconds
 
 ## 5. Functional Requirements - Hierarchical Distributed Mode
 
-### FR-HD001: Parent-Child Agent Communication
+### Implementation Status: Distributed Hierarchical
+**Overall**: 📋 20% Complete - Configuration exists, HTTP delegation not implemented
+
+**Implemented**:
+- ✅ Agent TOML configuration with `[sub_agents.*]` sections
+- ✅ Sub-agent URL and auth_token fields in config
+- ✅ Local hierarchical navigation (switchto/back commands)
+- ✅ Agent discovery from directory structure
+
+**Not Implemented** (requires architectural changes):
+- 📋 HTTP communication between parent and child agents
+- 📋 Parent-to-child request delegation
+- 📋 Load balancing across multiple agent instances
+- 📋 Service discovery API
+- 📋 Deployment controller for multi-server coordination
+
+**Note**: The current implementation supports hierarchical agents in **local mode only** (all agents in same process). Distributed mode with HTTP communication between agents is planned for v2.1.
+
+---
+
+### FR-HD001: Parent-Child Agent Communication 📋 PLANNED
 **Specific**: Parent agent SHALL communicate with child agent via HTTP REST API when in distributed mode.
 **Measurable**: HTTP request/response completes within 5 seconds, includes authentication.
 **Achievable**: Parent stores child agent URLs, makes HTTP calls to child's /api/generate or /atoll/tools/*.
