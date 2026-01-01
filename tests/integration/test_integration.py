@@ -49,21 +49,44 @@ class TestIntegration:
                 mock_llm = Mock()
                 mock_ollama.return_value = mock_llm
 
-                # Mock the startup confirmation to avoid prompt_toolkit console requirement
-                with patch.object(
-                    app, "_wait_for_startup_confirmation", new_callable=AsyncMock, return_value=True
-                ):
-                    # Test startup doesn't crash
-                    try:
-                        await asyncio.wait_for(app.startup(), timeout=5.0)
-                    except asyncio.TimeoutError:
-                        pytest.fail("Application startup timed out")
-                    finally:
-                        # Ensure proper cleanup
-                        await app.shutdown()
+                # Mock the agent manager to avoid loading real agents
+                with patch("atoll.main.ATOLLAgentManager") as mock_agent_manager:
+                    mock_agent_mgr_instance = Mock()
+                    mock_agent_mgr_instance.load_all_agents = AsyncMock()
+                    mock_agent_mgr_instance.loaded_agents = {}
+                    mock_agent_mgr_instance.get_agent_metadata = Mock(return_value=None)
+                    mock_agent_manager.return_value = mock_agent_mgr_instance
 
-                    assert app.agent is not None
-                    assert app.mcp_manager is not None
+                    # Mock deployment server to avoid starting it
+                    with patch("atoll.main.DeploymentServer") as mock_deploy_server:
+                        mock_deploy_instance = Mock()
+                        mock_deploy_instance.validate_local_server = AsyncMock(
+                            return_value=(True, "Success", 8100)
+                        )
+                        mock_deploy_instance.start = AsyncMock()
+                        mock_deploy_instance.generate_startup_report = AsyncMock(
+                            return_value="Mock report"
+                        )
+                        mock_deploy_server.return_value = mock_deploy_instance
+
+                        # Mock the startup confirmation to avoid prompt_toolkit console requirement
+                        with patch.object(
+                            app,
+                            "_wait_for_startup_confirmation",
+                            new_callable=AsyncMock,
+                            return_value=True,
+                        ):
+                            # Test startup doesn't crash
+                            try:
+                                await asyncio.wait_for(app.startup(), timeout=5.0)
+                            except asyncio.TimeoutError:
+                                pytest.fail("Application startup timed out")
+                            finally:
+                                # Ensure proper cleanup
+                                await app.shutdown()
+
+                            assert app.agent is not None
+                            assert app.mcp_manager is not None
 
     @pytest.mark.asyncio
     async def test_full_workflow(self):
@@ -95,21 +118,44 @@ class TestIntegration:
                 mock_llm.ainvoke = AsyncMock(return_value="Test response")
                 mock_ollama.return_value = mock_llm
 
-                # Mock the startup confirmation to avoid prompt_toolkit console requirement
-                with patch.object(
-                    app, "_wait_for_startup_confirmation", new_callable=AsyncMock, return_value=True
-                ):
-                    try:
-                        # Start the application
-                        await app.startup()
+                # Mock the agent manager to avoid loading real agents
+                with patch("atoll.main.ATOLLAgentManager") as mock_agent_manager:
+                    mock_agent_mgr_instance = Mock()
+                    mock_agent_mgr_instance.load_all_agents = AsyncMock()
+                    mock_agent_mgr_instance.loaded_agents = {}
+                    mock_agent_mgr_instance.get_agent_metadata = Mock(return_value=None)
+                    mock_agent_manager.return_value = mock_agent_mgr_instance
 
-                        # Process a prompt
-                        with (
-                            patch.object(app.ui, "display_user_input"),
-                            patch.object(app.ui, "display_response"),
+                    # Mock deployment server to avoid starting it
+                    with patch("atoll.main.DeploymentServer") as mock_deploy_server:
+                        mock_deploy_instance = Mock()
+                        mock_deploy_instance.validate_local_server = AsyncMock(
+                            return_value=(True, "Success", 8100)
+                        )
+                        mock_deploy_instance.start = AsyncMock()
+                        mock_deploy_instance.generate_startup_report = AsyncMock(
+                            return_value="Mock report"
+                        )
+                        mock_deploy_server.return_value = mock_deploy_instance
+
+                        # Mock the startup confirmation to avoid prompt_toolkit console requirement
+                        with patch.object(
+                            app,
+                            "_wait_for_startup_confirmation",
+                            new_callable=AsyncMock,
+                            return_value=True,
                         ):
-                            result = await app.agent.process_prompt("Test prompt")
-                            assert result is not None
-                    finally:
-                        # Ensure proper cleanup
-                        await app.shutdown()
+                            try:
+                                # Start the application
+                                await app.startup()
+
+                                # Process a prompt
+                                with (
+                                    patch.object(app.ui, "display_user_input"),
+                                    patch.object(app.ui, "display_response"),
+                                ):
+                                    result = await app.agent.process_prompt("Test prompt")
+                                    assert result is not None
+                            finally:
+                                # Ensure proper cleanup
+                                await app.shutdown()

@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from atoll.agent.agent import OllamaMCPAgent
+from atoll.agent.root_agent import RootAgent
 from atoll.mcp.server_manager import MCPServerManager
 from atoll.mcp.tool_registry import ToolRegistry
 
 
-class TestOllamaMCPAgentExtended:
-    """Extended tests for OllamaMCPAgent."""
+class TestRootAgentExtended:
+    """Extended tests for RootAgent (replaces OllamaMCPAgent tests)."""
 
     @pytest.mark.asyncio
     async def test_process_prompt_with_tools(self, ollama_config, mock_ui):
@@ -27,8 +27,10 @@ class TestOllamaMCPAgentExtended:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
@@ -38,8 +40,9 @@ class TestOllamaMCPAgentExtended:
         mock_llm.invoke = Mock(return_value="response with tools")
         agent.llm = mock_llm
 
-        # Mock reasoning engine
-        agent.reasoning_engine.analyze = AsyncMock(return_value=[])
+        # Mock reasoning engine if it exists
+        if agent.reasoning_engine:
+            agent.reasoning_engine.analyze = AsyncMock(return_value=[])
 
         result = await agent.process_prompt("test")
         assert result == "response with tools"
@@ -53,8 +56,10 @@ class TestOllamaMCPAgentExtended:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
@@ -77,8 +82,10 @@ class TestOllamaMCPAgentExtended:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
@@ -88,8 +95,9 @@ class TestOllamaMCPAgentExtended:
         mock_llm.invoke = Mock(return_value="")
         agent.llm = mock_llm
 
-        # Mock reasoning engine
-        agent.reasoning_engine.analyze = AsyncMock(return_value=[])
+        # Mock reasoning engine if it exists
+        if agent.reasoning_engine:
+            agent.reasoning_engine.analyze = AsyncMock(return_value=[])
 
         result = await agent.process_prompt("test")
         assert result == ""
@@ -103,8 +111,10 @@ class TestOllamaMCPAgentExtended:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
@@ -126,14 +136,16 @@ class TestOllamaMCPAgentExtended:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
 
-        agent.clear_memory()
-        mock_ui.display_info.assert_called_with("Conversation memory cleared")
+        agent.clear_conversation_memory()
+        # Note: clear_conversation_memory doesn't display info, unlike old clear_memory
 
     def test_create_agent_no_tools(self, ollama_config, mock_ui):
         """Test creating agent without tools."""
@@ -143,12 +155,13 @@ class TestOllamaMCPAgentExtended:
         mock_manager.tool_registry = mock_registry
         mock_manager.clients = {}
 
-        agent = OllamaMCPAgent(
-            ollama_config=ollama_config,
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=ollama_config,
             mcp_manager=mock_manager,
             ui=mock_ui,
         )
 
         assert agent.tools == []
-        assert agent.llm is not None
         assert agent.llm is not None

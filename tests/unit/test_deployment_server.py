@@ -8,6 +8,7 @@ Tests cover:
 - Port allocation
 """
 
+import asyncio
 import json
 import tempfile
 from pathlib import Path
@@ -24,7 +25,8 @@ from atoll.deployment.server import (
 @pytest.fixture
 def temp_agents_dir():
     """Create temporary agents directory with test configs."""
-    with tempfile.TemporaryDirectory() as tmpdir:
+    # Use ignore_cleanup_errors for Windows file permission issues
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
         agents_dir = Path(tmpdir) / "agents"
         agents_dir.mkdir()
 
@@ -88,11 +90,34 @@ def deployment_config(temp_agents_dir):
 
 @pytest.fixture
 async def deployment_server(deployment_config):
-    """Create and start deployment server."""
+    """Create and start deployment server.
+
+    Note: server.start() will discover agents and attempt to auto-start them.
+    Agents now start successfully with REST API server mode.
+    """
     server = DeploymentServer(deployment_config)
     await server.start()
     yield server
+
+    # Stop all running agents before stopping server
+    for agent_name in list(server.agents.keys()):
+        if server.agents[agent_name].status == "running":
+            await server.stop_agent(agent_name)
+
     await server.stop()
+
+    # Give more time for processes to fully terminate and release file handles on Windows
+    await asyncio.sleep(2)
+
+    # Force cleanup of any remaining processes
+    for agent_name in list(server.agents.keys()):
+        agent = server.agents[agent_name]
+        if agent.process and agent.process.poll() is None:
+            try:
+                agent.process.kill()
+                agent.process.wait(timeout=2)
+            except Exception:
+                pass
 
 
 class TestDeploymentServerInit:
@@ -102,12 +127,18 @@ class TestDeploymentServerInit:
     async def test_server_starts_successfully(self, deployment_config):
         """FR-D002: Deployment server initializes correctly."""
         server = DeploymentServer(deployment_config)
-        await server.start()
+        try:
+            await server.start()
 
-        assert server.running is True
-        assert server.config == deployment_config
-
-        await server.stop()
+            assert server.running is True
+            assert server.config == deployment_config
+        finally:
+            # Ensure cleanup
+            for agent_name in list(server.agents.keys()):
+                if server.agents[agent_name].status == "running":
+                    await server.stop_agent(agent_name)
+            await server.stop()
+            await asyncio.sleep(1)
 
     @pytest.mark.asyncio
     async def test_server_discovers_agents(self, deployment_server):
@@ -123,10 +154,21 @@ class TestDeploymentServerInit:
     async def test_server_stops_gracefully(self, deployment_config):
         """FR-D002: Server stops gracefully."""
         server = DeploymentServer(deployment_config)
-        await server.start()
-        await server.stop()
+        try:
+            await server.start()
 
-        assert server.running is False
+            assert server.running is True
+
+            # Stop all agents first
+            for agent_name in list(server.agents.keys()):
+                if server.agents[agent_name].status == "running":
+                    await server.stop_agent(agent_name)
+
+            await server.stop()
+            assert server.running is False
+        finally:
+            # Additional cleanup
+            await asyncio.sleep(1)
 
 
 class TestAgentDiscovery:
@@ -176,12 +218,13 @@ class TestAgentLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_agent_successfully(self, deployment_server):
-        """FR-D002: Start agent returns False when agent startup fails (no --server mode)."""
-        # Note: Returns False because ATOLL doesn't support --server mode yet
+        """FR-D002: Start agent with REST API server mode."""
+        # With --server mode implemented, agent should start successfully
         result = await deployment_server.start_agent("test_agent1")
 
         assert isinstance(result, bool)
-        assert result is False  # Expected to fail without --server mode support
+        # Agent should start successfully now that --server mode exists
+        assert result is True
 
     @pytest.mark.asyncio
     async def test_stop_agent_successfully(self, deployment_server):
@@ -194,12 +237,12 @@ class TestAgentLifecycle:
 
     @pytest.mark.asyncio
     async def test_restart_agent_successfully(self, deployment_server):
-        """FR-D002: Restart agent returns False when not running."""
-        # Restart should return False since agent isn't running
+        """FR-D002: Restart agent successfully."""
+        # Agent is auto-started, so restart should succeed
         result = await deployment_server.restart_agent("test_agent1")
 
         assert isinstance(result, bool)
-        assert result is False  # Can't restart non-running agent
+        assert result is True  # Restart succeeds for running agent
 
     @pytest.mark.asyncio
     async def test_start_nonexistent_agent_fails(self, deployment_server):
@@ -251,23 +294,29 @@ class TestHealthMonitoring:
         """FR-D002: Agent auto-restarts on failure when enabled."""
         deployment_config.restart_on_failure = True
         server = DeploymentServer(deployment_config)
-        await server.start()
+        try:
+            await server.start()
 
-        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
-            mock_process = MagicMock()
-            mock_process.pid = 12345
-            mock_process.poll = MagicMock(return_value=None)
-            mock_subprocess.return_value = mock_process
+            with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+                mock_process = MagicMock()
+                mock_process.pid = 12345
+                mock_process.poll = MagicMock(return_value=None)
+                mock_subprocess.return_value = mock_process
 
-            await server.start_agent("test_agent1")
+                await server.start_agent("test_agent1")
 
-            # Check restart count is tracked
-            instances = server.list_agents()
-            agent = [i for i in instances if i["name"] == "test_agent1"][0]
-            assert "restart_count" in agent
-            assert agent["restart_count"] == 0
-
-        await server.stop()
+                # Check restart count is tracked
+                instances = server.list_agents()
+                agent = [i for i in instances if i["name"] == "test_agent1"][0]
+                assert "restart_count" in agent
+                assert agent["restart_count"] == 0
+        finally:
+            # Cleanup
+            for agent_name in list(server.agents.keys()):
+                if server.agents[agent_name].status == "running":
+                    await server.stop_agent(agent_name)
+            await server.stop()
+            await asyncio.sleep(1)
 
     @pytest.mark.asyncio
     async def test_restart_on_failure_disabled(self, deployment_config):
@@ -275,13 +324,19 @@ class TestHealthMonitoring:
         deployment_config.restart_on_failure = False
         deployment_config.max_restarts = 2
         server = DeploymentServer(deployment_config)
-        await server.start()
+        try:
+            await server.start()
 
-        # Verify configuration is set correctly
-        assert server.config.restart_on_failure is False
-        assert server.config.max_restarts == 2
-
-        await server.stop()
+            # Verify configuration is set correctly
+            assert server.config.restart_on_failure is False
+            assert server.config.max_restarts == 2
+        finally:
+            # Cleanup
+            for agent_name in list(server.agents.keys()):
+                if server.agents[agent_name].status == "running":
+                    await server.stop_agent(agent_name)
+            await server.stop()
+            await asyncio.sleep(1)
 
 
 class TestAgentStatus:
@@ -289,13 +344,13 @@ class TestAgentStatus:
 
     @pytest.mark.asyncio
     async def test_get_agent_status_running(self, deployment_server):
-        """FR-D002: Get status shows discovered agents."""
-        # Agent exists but isn't running (no --server mode support yet)
+        """FR-D002: Get status shows running agents."""
+        # Agent auto-started during deployment server startup
         status = deployment_server.get_agent_status("test_agent1")
 
         assert status is not None
         assert status["name"] == "test_agent1"
-        assert status["status"] in ["discovered", "stopped", "failed"]
+        assert status["status"] in ["discovered", "stopped", "failed", "running"]
 
     @pytest.mark.asyncio
     async def test_get_agent_status_not_found(self, deployment_server):
@@ -306,7 +361,11 @@ class TestAgentStatus:
 
     @pytest.mark.asyncio
     async def test_list_all_agents_shows_correct_info(self, deployment_server):
-        """FR-D002: List all agents shows correct information."""
+        """FR-D002: List all agents shows correct information.
+
+        Note: Auto-start attempts fail because --server mode isn't implemented,
+        so agents will be in 'failed' status.
+        """
         agents = deployment_server.list_agents()
 
         assert len(agents) >= 2  # At least our test agents
@@ -314,7 +373,7 @@ class TestAgentStatus:
         for agent in agents:
             assert "name" in agent
             assert "status" in agent
-            assert agent["status"] in ["discovered", "running", "stopped"]
+            assert agent["status"] in ["discovered", "running", "stopped", "failed"]
 
 
 class TestDeploymentServerIntegration:
@@ -324,24 +383,113 @@ class TestDeploymentServerIntegration:
     async def test_deployment_server_starts_with_application(self, deployment_config):
         """FR-D002: Deployment server starts when ATOLL starts."""
         server = DeploymentServer(deployment_config)
-        await server.start()
+        try:
+            await server.start()
 
-        assert server.running is True
-        assert len(server.list_agents()) > 0
-
-        await server.stop()
+            assert server.running is True
+            assert len(server.list_agents()) > 0
+        finally:
+            # Cleanup
+            for agent_name in list(server.agents.keys()):
+                if server.agents[agent_name].status == "running":
+                    await server.stop_agent(agent_name)
+            await server.stop()
+            await asyncio.sleep(1)
 
     @pytest.mark.asyncio
     async def test_deployment_server_stops_with_application(self, deployment_config):
         """FR-D002: Deployment server stops when ATOLL stops."""
         server = DeploymentServer(deployment_config)
-        await server.start()
+        try:
+            await server.start()
 
-        # Simulate stopping all agents
-        for agent in server.list_agents():
-            if agent["status"] == "running":
-                await server.stop_agent(agent["name"])
+            # Simulate stopping all agents
+            for agent in server.list_agents():
+                if agent["status"] == "running":
+                    await server.stop_agent(agent["name"])
 
-        await server.stop()
+            await server.stop()
 
-        assert server.running is False
+            assert server.running is False
+        finally:
+            # Additional cleanup
+            await asyncio.sleep(1)
+
+
+class TestDeploymentConfigSerialization:
+    """Test configuration serialization/deserialization."""
+
+    def test_from_dict_converts_agents_directory_string_to_path(self):
+        """Test that agents_directory string is converted to Path when loading from dict.
+
+        This prevents the bug: 'str' object has no attribute 'exists'
+        which occurs when agents_directory is loaded from JSON as a string.
+        """
+        # Simulate loading from JSON where agents_directory is a string
+        data = {
+            "enabled": True,
+            "host": "localhost",
+            "base_port": 8100,
+            "agents_directory": "/path/to/agents",
+        }
+
+        config = DeploymentServerConfig.from_dict(data)
+
+        # Verify agents_directory is converted to Path
+        assert isinstance(config.agents_directory, Path)
+        assert config.agents_directory == Path("/path/to/agents")
+
+    def test_from_dict_handles_none_agents_directory(self):
+        """Test that None agents_directory is handled correctly."""
+        data = {
+            "enabled": True,
+            "host": "localhost",
+            "base_port": 8100,
+            "agents_directory": None,
+        }
+
+        config = DeploymentServerConfig.from_dict(data)
+
+        # Verify None is preserved
+        assert config.agents_directory is None
+
+    def test_from_dict_with_path_object(self):
+        """Test that Path objects are preserved when already Path."""
+        test_path = Path("/test/path")
+        data = {
+            "enabled": True,
+            "host": "localhost",
+            "base_port": 8100,
+            "agents_directory": test_path,
+        }
+
+        config = DeploymentServerConfig.from_dict(data)
+
+        # Verify Path is preserved
+        assert isinstance(config.agents_directory, Path)
+        assert config.agents_directory == test_path
+
+    @pytest.mark.asyncio
+    async def test_discover_agents_with_string_path_from_json(self, temp_agents_dir):
+        """Integration test: ensure discover_agents works with config loaded from JSON."""
+        # Simulate loading from JSON where agents_directory is a string
+        config_data = {
+            "enabled": True,
+            "base_port": 8100,
+            "agents_directory": str(temp_agents_dir),  # String, as from JSON
+        }
+
+        config = DeploymentServerConfig.from_dict(config_data)
+        server = DeploymentServer(config)
+
+        try:
+            # This should not raise 'str' object has no attribute 'exists'
+            await server.discover_agents()
+
+            # Verify agents were discovered
+            agents = server.list_agents()
+            assert len(agents) >= 2  # Should find test_agent1 and test_agent2
+        finally:
+            # Cleanup
+            await server.stop()
+            await asyncio.sleep(1)

@@ -1,6 +1,7 @@
 {
   "enabled": true,
   "host": "localhost",
+  "api_port": 8080,
   "base_port": 8100,
   "max_agents": 10,
   "health_check_interval": 30,
@@ -12,21 +13,21 @@
     {
       "name": "production-server-1",
       "host": "192.168.1.100",
-      "port": 8100,
+      "port": 8080,
       "enabled": true,
       "description": "Production ATOLL deployment server in datacenter"
     },
     {
       "name": "dev-server",
       "host": "dev.example.com",
-      "port": 8100,
+      "port": 8080,
       "enabled": false,
       "description": "Development ATOLL server (currently disabled)"
     },
     {
       "name": "backup-server",
       "host": "192.168.1.101",
-      "port": 8100,
+      "port": 8080,
       "enabled": true,
       "description": "Backup ATOLL deployment server"
     }

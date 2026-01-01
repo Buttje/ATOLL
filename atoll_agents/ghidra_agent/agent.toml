@@ -1,0 +1,95 @@
+# ATOLL Agent Configuration - Ghidra Binary Analysis Agent
+# Compliant with ATOLL v2.0 Specification
+
+# ============================================================================
+# Agent Metadata
+# ============================================================================
+[agent]
+name = "GhidraAgent"
+version = "2.0.0"
+description = "Specialized agent for binary reverse engineering using Ghidra and GhidraMCP"
+author = "ATOLL Contributors"
+license = "MIT"
+capabilities = [
+    "binary_analysis",
+    "decompilation",
+    "symbol_analysis",
+    "reverse_engineering",
+    "vulnerability_detection",
+    "assembly_analysis",
+    "function_analysis",
+    "cross_reference_analysis"
+]
+
+# ============================================================================
+# LLM Configuration (Optimized for Code Analysis)
+# ============================================================================
+[llm]
+model = "codellama:7b"  # CodeLlama optimized for code analysis
+temperature = 0.3  # Lower temperature for more deterministic analysis
+top_p = 0.9
+max_tokens = 4096
+request_timeout = 90  # Longer timeout for complex decompilations
+
+# Custom system prompt for reverse engineering
+system_prompt = """You are an expert reverse engineer and binary analyst. You specialize in:
+- Analyzing compiled binaries and executables
+- Understanding assembly code and low-level operations
+- Identifying software vulnerabilities and security issues
+- Decompiling functions and understanding program behavior
+- Analyzing symbol tables, cross-references, and program structure
+
+When analyzing binaries, you:
+1. Identify the binary format (ELF, PE, Mach-O)
+2. Examine entry points and main functions
+3. Analyze function signatures and calling conventions
+4. Look for security vulnerabilities (buffer overflows, format strings, etc.)
+5. Explain the purpose and behavior of code segments
+6. Provide clear, actionable insights for reverse engineering tasks
+
+Always prioritize security analysis and provide detailed explanations of your findings."""
+
+# ============================================================================
+# Python Dependencies
+# ============================================================================
+[dependencies]
+python = ">=3.9,<3.14"
+packages = [
+    "pydantic>=2.0.0",
+    "aiohttp>=3.9.0",
+    "langchain>=0.2.0",
+    "langchain-core>=0.2.0",
+    "langchain-ollama>=0.1.0"
+]
+
+# ============================================================================
+# Resource Limits
+# ============================================================================
+[resources]
+cpu_limit = 2.0  # 2 CPU cores for parallel analysis
+memory_limit = "4GB"  # Ghidra analysis can be memory-intensive
+max_concurrent_requests = 5  # Limit concurrent binary analyses
+health_check_interval = 30  # Health check every 30 seconds
+
+# ============================================================================
+# MCP Servers Configuration
+# ============================================================================
+[mcp_servers.ghidramcp]
+type = "stdio"
+command = "python"
+args = [
+    "D:\\GitHub\\GhidraMCP\\Release\\GhidraMCP-release-1-4\\bridge_mcp_ghidra.py",
+    "--ghidra-server",
+    "http://127.0.0.1:8080"
+]
+timeout = 60
+env = { GHIDRA_HEADLESS = "true" }
+
+# ============================================================================
+# Deployment Configuration
+# ============================================================================
+[deployment]
+port = 0  # Auto-assign port
+auto_restart = true  # Restart on failure
+max_restarts = 3  # Maximum restart attempts
+restart_delay = 5  # Wait 5 seconds between restarts

@@ -195,6 +195,7 @@ class Application:
             deployment_config = DeploymentServerConfig(
                 enabled=True,
                 host="localhost",
+                api_port=8080,
                 base_port=8100,
                 auto_discover_port=True,
                 agents_directory=agents_dir,
@@ -1278,6 +1279,22 @@ def main():
         action="store_true",
         help="Enable debug logging",
     )
+    parser.add_argument(
+        "--server",
+        action="store_true",
+        help="Run in REST API server mode",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port for REST API server (default: 8000)",
+    )
+    parser.add_argument(
+        "--agent",
+        type=str,
+        help="Path to agent configuration file (for server mode)",
+    )
     args = parser.parse_args()
 
     # Setup logging
@@ -1285,8 +1302,15 @@ def main():
     setup_logging(level=log_level)
 
     try:
-        app = Application()
-        asyncio.run(app.run())
+        # Check if server mode is requested
+        if args.server:
+            from .server.api import run_server
+
+            asyncio.run(run_server(port=args.port, agent_config_path=args.agent))
+        else:
+            # Normal terminal UI mode
+            app = Application()
+            asyncio.run(app.run())
     except KeyboardInterrupt:
         # Handle Ctrl+C gracefully without showing traceback
         print("\nGoodbye!")

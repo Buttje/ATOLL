@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from atoll.agent.agent import OllamaMCPAgent
+from atoll.agent.root_agent import RootAgent
 from atoll.config.models import OllamaConfig
 from atoll.main import Application
 
@@ -20,7 +20,13 @@ class TestServerConnectivity:
         mcp_manager.tool_registry = Mock(tools={})
         ui = Mock()
 
-        agent = OllamaMCPAgent(ollama_config=config, mcp_manager=mcp_manager, ui=ui)
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=config,
+            mcp_manager=mcp_manager,
+            ui=ui,
+        )
 
         # Mock the aiohttp request
         with patch("aiohttp.ClientSession") as mock_session_class:
@@ -56,7 +62,13 @@ class TestServerConnectivity:
         mcp_manager.tool_registry = Mock(tools={})
         ui = Mock()
 
-        agent = OllamaMCPAgent(ollama_config=config, mcp_manager=mcp_manager, ui=ui)
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=config,
+            mcp_manager=mcp_manager,
+            ui=ui,
+        )
 
         # Mock the aiohttp request to raise an exception
         with patch("aiohttp.ClientSession") as mock_session:
@@ -76,7 +88,13 @@ class TestServerConnectivity:
         mcp_manager.tool_registry = Mock(tools={})
         ui = Mock()
 
-        agent = OllamaMCPAgent(ollama_config=config, mcp_manager=mcp_manager, ui=ui)
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=config,
+            mcp_manager=mcp_manager,
+            ui=ui,
+        )
 
         # Mock list_models to return the configured model
         with patch.object(agent, "list_models", return_value=["llama2", "mistral"]):
@@ -92,7 +110,13 @@ class TestServerConnectivity:
         mcp_manager.tool_registry = Mock(tools={})
         ui = Mock()
 
-        agent = OllamaMCPAgent(ollama_config=config, mcp_manager=mcp_manager, ui=ui)
+        agent = RootAgent(
+            name="TestAgent",
+            version="1.0.0",
+            llm_config=config,
+            mcp_manager=mcp_manager,
+            ui=ui,
+        )
 
         # Mock list_models to not include the configured model
         with patch.object(agent, "list_models", return_value=["llama2", "mistral"]):

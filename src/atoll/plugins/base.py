@@ -4,6 +4,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional
 
+import aiohttp
 from langchain_core.messages import AIMessage, HumanMessage
 
 try:
@@ -307,6 +308,62 @@ Think step-by-step and explain your reasoning."""
             if self.ui:
                 self.ui.display_error(f"Failed to change model: {e}")
             return False
+
+    async def check_server_connection(self) -> bool:
+        """Check if Ollama server is reachable.
+
+        Returns:
+            True if server is reachable, False otherwise
+        """
+        if not self.llm_config:
+            return False
+
+        url = f"{self.llm_config.base_url}:{self.llm_config.port}/api/tags"
+
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+            ):
+                return response.status == 200
+        except Exception:
+            return False
+
+    async def check_model_available(self) -> bool:
+        """Check if the configured model is available.
+
+        Returns:
+            True if model is available, False otherwise
+        """
+        if not self.llm_config:
+            return False
+
+        models = await self.list_models()
+        return self.llm_config.model in models
+
+    async def list_models(self) -> list[str]:
+        """List available Ollama models.
+
+        Returns:
+            List of available model names
+        """
+        if not self.llm_config:
+            return []
+
+        url = f"{self.llm_config.base_url}:{self.llm_config.port}/api/tags"
+
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response,
+            ):
+                data = await response.json()
+                models = [model["name"] for model in data.get("models", [])]
+                return models
+        except Exception as e:
+            if self.ui:
+                self.ui.display_error(f"Failed to list models: {e}")
+            return []
 
     @abstractmethod
     async def process(self, prompt: str, context: dict[str, Any]) -> dict[str, Any]:

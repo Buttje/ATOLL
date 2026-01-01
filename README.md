@@ -6,10 +6,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Coverage](https://img.shields.io/badge/coverage-90%25-green.svg)](https://github.com/Buttje/ATOLL)
+[![Version](https://img.shields.io/badge/version-2.0.0-brightgreen.svg)](https://github.com/Buttje/ATOLL/releases)
 
 **A powerful LangChain-based AI agent that seamlessly integrates Ollama LLMs with MCP (Model Context Protocol) servers, enabling intelligent tool orchestration and extensible capabilities through MCP server integration.**
 
-[Features](#features) • [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing)
+**✨ NEW in v2.0:** REST API for remote agent management, ZIP package deployment, MD5 checksum tracking, and virtual environment isolation!
+
+[Features](#features) • [Quick Start](#quick-start) • [v2.0 Features](#v20-deployment-server) • [Documentation](#documentation) • [Contributing](#contributing)
 
 </div>
 
@@ -61,6 +64,8 @@ ATOLL (Agentic Tools Orchestration on OLLama) is an intelligent AI agent framewo
 
 ## ✨ Features
 
+### Core Capabilities
+
 - 🤖 **LangChain Agent Integration**: Intelligent decision-making and reasoning powered by Ollama LLM
 - 🔧 **MCP Server Support**: Connect to multiple MCP servers with different transport protocols (stdio, HTTP, SSE)
 - 🎨 **Interactive Terminal UI**: Color-coded interface with command and prompt modes for enhanced user experience
@@ -70,6 +75,28 @@ ATOLL (Agentic Tools Orchestration on OLLama) is an intelligent AI agent framewo
 - 🧪 **Well-Tested**: Extensive test coverage (90%+) with unit and integration tests
 - 🔄 **Hot Model Switching**: Change LLM models on-the-fly without restarting
 - 💾 **Conversation Memory**: Maintains context across interactions with memory management
+
+### 🚀 v2.0 Deployment Server
+
+**NEW in v2.0 - Production-Ready Agent Management:**
+
+- 🌐 **REST API**: Full-featured HTTP API for remote agent lifecycle management
+- 📦 **ZIP Package Deployment**: Deploy agents as self-contained ZIP packages with automatic extraction
+- 🔐 **MD5 Checksum Tracking**: Prevent duplicate deployments and ensure package integrity
+- 🏠 **Virtual Environment Isolation**: Each agent runs in its own isolated Python environment
+- 📡 **Deployment Client**: Python client library for programmatic server interaction (async & sync APIs)
+- 🔄 **Auto-Restart**: Automatic agent restart on failure (configurable)
+- 📊 **Status Monitoring**: Real-time agent status, port allocation, and health checks
+- 🎯 **Multi-Agent Orchestration**: Deploy and manage multiple coordinated agents
+
+**Perfect for:**
+- CI/CD pipelines
+- Production deployments
+- Multi-agent systems
+- Remote agent management
+- Containerized deployments
+
+See [Deployment Server v2.0 Usage Guide](docs/DEPLOYMENT_SERVER_V2_USAGE.md) for details.
 
 ---
 

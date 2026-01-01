@@ -34,6 +34,9 @@ class AgentInstance:
     last_health_check: Optional[datetime] = None
     health_status: str = "unknown"  # unknown, healthy, unhealthy
     error_message: Optional[str] = None
+    stdout_log: Optional[str] = None  # Captured stdout
+    stderr_log: Optional[str] = None  # Captured stderr
+    exit_code: Optional[int] = None  # Process exit code if failed
 
 
 @dataclass
@@ -58,6 +61,7 @@ class DeploymentServerConfig:
 
     enabled: bool = True  # Auto-start deployment server
     host: str = "localhost"
+    api_port: int = 8080  # Port for REST API server
     base_port: int = 8100  # Starting port for agent instances
     max_agents: int = 10
     health_check_interval: int = 30  # Seconds
@@ -73,6 +77,10 @@ class DeploymentServerConfig:
         config_dict = {
             k: v for k, v in data.items() if k in cls.__annotations__ and k != "remote_servers"
         }
+
+        # Convert agents_directory string to Path if present
+        if "agents_directory" in config_dict and config_dict["agents_directory"] is not None:
+            config_dict["agents_directory"] = Path(config_dict["agents_directory"])
 
         # Handle remote_servers separately
         if "remote_servers" in data:
@@ -105,6 +113,7 @@ class DeploymentServer:
         self.agents: dict[str, AgentInstance] = {}
         self.next_port = config.base_port
         self.health_check_task: Optional[asyncio.Task] = None
+        self.api_task: Optional[asyncio.Task] = None
         self.running = False
 
     async def start(self) -> None:
@@ -113,21 +122,79 @@ class DeploymentServer:
             logger.info("Deployment server disabled in configuration")
             return
 
-        logger.info(f"Starting ATOLL deployment server on {self.config.host}")
+        print("\n" + "=" * 70)
+        print("STARTING LOCAL DEPLOYMENT SERVER")
+        print("=" * 70)
+        logger.info("Starting ATOLL deployment server")
+        print(f"  → REST API Port: {self.config.api_port}")
+        print(f"  → Agents Directory: {self.config.agents_directory}")
+        print(
+            f"  → Agent Port Range: {self.config.base_port}-{self.config.base_port + self.config.max_agents - 1}"
+        )
+        print(f"    (First agent will use port {self.config.base_port})")
+
+        self.running = True
+
+        # Start REST API server
+        from .api import run_api_server
+
+        storage_path = Path.home() / ".atoll_deployment" / "agents"
+        storage_path.mkdir(parents=True, exist_ok=True)
+
+        print("\n🌐 Starting REST API...")
+        self.api_task = asyncio.create_task(
+            run_api_server(
+                deployment_server=self,
+                host=self.config.host,
+                port=self.config.api_port,
+                storage_path=storage_path,
+            )
+        )
+        # Give API a moment to start
+        await asyncio.sleep(0.5)
+        print(f"   ✓ REST API running on http://{self.config.host}:{self.config.api_port}")
+        logger.info(f"REST API started on {self.config.host}:{self.config.api_port}")
         self.running = True
 
         # Discover available agents
+        print("\n📂 Discovering agent configurations...")
         await self.discover_agents()
+        print(f"   ✓ Found {len(self.agents)} agent configuration(s)")
+
+        # Auto-start all discovered agents
+        if self.agents:
+            print(f"\n{'='*70}")
+            print("STARTING AGENT SERVERS")
+            print(f"{'='*70}")
+            for agent_name in list(self.agents.keys()):
+                logger.info(f"Auto-starting discovered agent: {agent_name}")
+                await self.start_agent(agent_name)
 
         # Start health monitoring
         self.health_check_task = asyncio.create_task(self._health_check_loop())
 
+        print(f"\n{'='*70}")
+        print("✓ DEPLOYMENT SERVER STARTED")
+        print(f"{'='*70}")
+        print(f"  → Managing {len(self.agents)} agent(s)")
+        print(
+            f"  → Running agents: {len([a for a in self.agents.values() if a.status == 'running'])}"
+        )
+        print(f"{'='*70}\n")
         logger.info(f"Deployment server started. Managing {len(self.agents)} agent(s)")
 
     async def stop(self) -> None:
         """Stop the deployment server and all managed agents."""
         logger.info("Stopping deployment server...")
         self.running = False
+
+        # Cancel API task
+        if self.api_task:
+            self.api_task.cancel()
+            try:
+                await self.api_task
+            except asyncio.CancelledError:
+                pass
 
         # Cancel health check task
         if self.health_check_task:
@@ -213,8 +280,13 @@ class DeploymentServer:
             # Assign port
             agent.port = self._allocate_port()
 
+            print(f"\n  🚀 Starting Agent Server: {agent_name}")
+            print(f"     → Agent will listen on port: {agent.port}")
+            print(f"     → Working directory: {agent.config_path.parent}")
+
             # Build command to start agent in server mode
             # This will be: atoll --server --port {port} --agent {config_path}
+            # Use config filename only since cwd is set to agent directory
             cmd = [
                 sys.executable,
                 "-m",
@@ -223,7 +295,7 @@ class DeploymentServer:
                 "--port",
                 str(agent.port),
                 "--agent",
-                str(agent.config_path),
+                agent.config_path.name,  # Just the filename, not full path
             ]
 
             logger.info(f"Starting agent {agent_name} on port {agent.port}")
@@ -240,6 +312,7 @@ class DeploymentServer:
             agent.pid = agent.process.pid
             agent.status = "starting"
             agent.start_time = datetime.now()
+            print(f"     → Process ID: {agent.pid}")
 
             # Wait a bit to see if it starts successfully
             await asyncio.sleep(2)
@@ -247,20 +320,53 @@ class DeploymentServer:
             if agent.process.poll() is None:
                 # Still running
                 agent.status = "running"
+                print(f"\n  ✓ Agent Server running: {agent_name}")
+                print(f"     → API endpoint: http://{self.config.host}:{agent.port}")
+                print(f"     → Process ID: {agent.pid}")
+                print(f"     → Status: {agent.status}")
                 logger.info(f"Agent {agent_name} started successfully (PID: {agent.pid})")
                 return True
             else:
-                # Process exited
+                # Process exited - capture full error details
                 stdout, stderr = agent.process.communicate()
+                agent.exit_code = agent.process.returncode
+                agent.stdout_log = stdout.decode(errors="replace") if stdout else ""
+                agent.stderr_log = stderr.decode(errors="replace") if stderr else ""
                 agent.status = "failed"
-                agent.error_message = stderr.decode() if stderr else "Unknown error"
-                logger.error(f"Agent {agent_name} failed to start: {agent.error_message}")
+
+                # Build comprehensive error message
+                error_parts = [
+                    f"Agent failed to start (exit code: {agent.exit_code})",
+                    "\n--- STDERR ---",
+                    agent.stderr_log if agent.stderr_log else "(no stderr output)",
+                    "\n--- STDOUT ---",
+                    agent.stdout_log if agent.stdout_log else "(no stdout output)",
+                    "\n--- DIAGNOSTICS ---",
+                    self._generate_diagnostics(agent),
+                ]
+                agent.error_message = "\n".join(error_parts)
+
+                print(f"  ✗ {agent_name} failed to start")
+                print(f"    Exit code: {agent.exit_code}")
+                print(f"\n{agent.error_message}")
+                logger.error(f"Agent {agent_name} failed to start:")
+                logger.error(agent.error_message)
                 return False
 
         except Exception as e:
             agent.status = "failed"
-            agent.error_message = str(e)
-            logger.error(f"Failed to start agent {agent_name}: {e}")
+            import traceback
+
+            error_details = [
+                f"Exception during agent startup: {type(e).__name__}: {e}",
+                "\n--- TRACEBACK ---",
+                traceback.format_exc(),
+                "\n--- DIAGNOSTICS ---",
+                self._generate_diagnostics(agent),
+            ]
+            agent.error_message = "\n".join(error_details)
+            logger.error(f"Failed to start agent {agent_name}:")
+            logger.error(agent.error_message)
             return False
 
     async def stop_agent(self, agent_name: str) -> bool:
@@ -427,8 +533,14 @@ class DeploymentServer:
         Returns:
             Available port number
         """
-        port = self.next_port
-        self.next_port += 1
+        # Find next available port
+        port = self.find_available_port(self.next_port)
+        if port is None:
+            # Fallback to incrementing if search fails
+            port = self.next_port
+            self.next_port += 1
+        else:
+            self.next_port = port + 1
         return port
 
     def _free_port(self, port: int) -> None:
@@ -466,15 +578,36 @@ class DeploymentServer:
     async def validate_local_server(self) -> tuple[bool, str, Optional[int]]:
         """Validate that local deployment server can start.
 
+        Note: The deployment server itself doesn't listen on a port - it manages
+        agent subprocesses. This validation ensures we can allocate ports for agents.
+
         Returns:
-            Tuple of (success, message, port)
+            Tuple of (success, message, base_port_for_agents)
         """
         # Check if enabled
         if not self.config.enabled:
             return False, "Local deployment server is disabled in configuration", None
 
-        # Find available port if auto-discovery enabled
+        # Auto-discover API port if enabled
         if self.config.auto_discover_port:
+            # Find available port for REST API
+            api_port = self.find_available_port(self.config.api_port)
+            if api_port is None:
+                return (
+                    False,
+                    f"No available ports found for REST API starting from {self.config.api_port}",
+                    None,
+                )
+
+            if api_port != self.config.api_port:
+                logger.info(
+                    f"REST API port changed to {api_port} (port {self.config.api_port} was in use)"
+                )
+                self.config.api_port = api_port
+
+        # Set up port range for agents
+        if self.config.auto_discover_port:
+            # Find first available port in range for agent allocation
             port = self.find_available_port(self.config.base_port)
             if port is None:
                 return (
@@ -485,23 +618,151 @@ class DeploymentServer:
 
             if port != self.config.base_port:
                 logger.info(
-                    f"Auto-discovered available port: {port} (base port {self.config.base_port} was in use)"
+                    f"Agent port range starts at {port} (base port {self.config.base_port} was in use)"
                 )
                 self.next_port = port
                 self.config.base_port = port
+            else:
+                self.next_port = port
         else:
-            port = self.config.base_port
-            # Check if port is available
-            test_port = self.find_available_port(port, 1)
-            if test_port is None:
-                return False, f"Port {port} is already in use and auto-discovery is disabled", None
+            # Use configured base port
+            self.next_port = self.config.base_port
 
         # Check agents directory
         if self.config.agents_directory:
             if not self.config.agents_directory.exists():
                 logger.warning(f"Agents directory does not exist: {self.config.agents_directory}")
 
-        return True, "Local deployment server validated successfully", port
+        return True, "Local deployment server validated successfully", self.next_port
+
+    def _generate_diagnostics(self, agent: AgentInstance) -> str:
+        """Generate diagnostic information for failed agent startup.
+
+        Args:
+            agent: The agent instance that failed
+
+        Returns:
+            Formatted diagnostic string with actionable suggestions
+        """
+        diagnostics = []
+
+        # Check Python version
+        python_version = (
+            f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        )
+        diagnostics.append(f"Python version: {python_version}")
+
+        # Python 3.14 known issue
+        if sys.version_info >= (3, 14):
+            diagnostics.append("⚠️  WARNING: Python 3.14+ detected")
+            diagnostics.append("   LangChain's Pydantic V1 compatibility may cause issues")
+            diagnostics.append("   RECOMMENDED: Use Python 3.11 or 3.13")
+
+        # Check configuration file
+        if agent.config_path and agent.config_path.exists():
+            diagnostics.append(f"Config file: {agent.config_path} (exists)")
+
+            # Check for common config issues
+            try:
+                if agent.config_path.suffix == ".toml":
+                    config = TOMLAgentConfig.from_toml_file(str(agent.config_path))
+
+                    # Check Python version requirement
+                    if config.dependencies and config.dependencies.python:
+                        diagnostics.append(f"Required Python: {config.dependencies.python}")
+
+                    # Check if packages are listed
+                    if config.dependencies and config.dependencies.packages:
+                        diagnostics.append(
+                            f"Dependencies: {len(config.dependencies.packages)} packages required"
+                        )
+                        diagnostics.append(
+                            f"  Packages: {', '.join(config.dependencies.packages[:5])}"
+                        )
+                        if len(config.dependencies.packages) > 5:
+                            diagnostics.append(
+                                f"  ... and {len(config.dependencies.packages) - 5} more"
+                            )
+
+            except Exception as e:
+                diagnostics.append(f"⚠️  Config parsing error: {e}")
+
+        else:
+            diagnostics.append(f"⚠️  Config file not found: {agent.config_path}")
+
+        # Check working directory
+        if agent.config_path:
+            work_dir = agent.config_path.parent
+            diagnostics.append(f"Working directory: {work_dir}")
+
+            # Check for common files
+            has_main = (work_dir / "main.py").exists()
+            has_requirements = (work_dir / "requirements.txt").exists()
+            has_venv = (work_dir / ".venv").exists()
+
+            diagnostics.append(f"  main.py: {'✓ found' if has_main else '✗ missing'}")
+            diagnostics.append(
+                f"  requirements.txt: {'✓ found' if has_requirements else '✗ missing'}"
+            )
+            diagnostics.append(
+                f"  .venv: {'✓ found' if has_venv else '✗ missing (no virtual environment)'}"
+            )
+
+        # Common error patterns
+        if agent.stderr_log:
+            stderr_lower = agent.stderr_log.lower()
+
+            if "modulenotfounderror" in stderr_lower or "importerror" in stderr_lower:
+                diagnostics.append("\\n💡 LIKELY CAUSE: Missing Python dependencies")
+                diagnostics.append(
+                    "   FIX: Install dependencies in the agent's virtual environment:"
+                )
+                if agent.config_path:
+                    venv_path = agent.config_path.parent / ".venv"
+                    if sys.platform == "win32":
+                        diagnostics.append(
+                            f"   {venv_path}\\\\Scripts\\\\pip.exe install -r requirements.txt"
+                        )
+                    else:
+                        diagnostics.append(f"   {venv_path}/bin/pip install -r requirements.txt")
+
+            elif "pydantic" in stderr_lower and "v1" in stderr_lower:
+                diagnostics.append("\\n💡 LIKELY CAUSE: Pydantic V1 compatibility with Python 3.14+")
+                diagnostics.append("   FIX: Use Python 3.11 or 3.13 instead of 3.14")
+                diagnostics.append("   OR: Wait for LangChain to fully support Python 3.14")
+
+            elif "port" in stderr_lower and ("in use" in stderr_lower or "bind" in stderr_lower):
+                diagnostics.append(f"\\n💡 LIKELY CAUSE: Port {agent.port} already in use")
+                diagnostics.append("   FIX: Stop other services using that port, or")
+                diagnostics.append("   change 'base_port' in deployment server config")
+
+            elif "permission" in stderr_lower or "access denied" in stderr_lower:
+                diagnostics.append("\\n💡 LIKELY CAUSE: Permission/access error")
+                diagnostics.append(
+                    "   FIX: Check file permissions and try running with appropriate privileges"
+                )
+
+            elif "connection" in stderr_lower and "refused" in stderr_lower:
+                diagnostics.append("\\n💡 LIKELY CAUSE: Cannot connect to required service")
+                diagnostics.append(
+                    "   FIX: Ensure Ollama, Ghidra, or other required services are running"
+                )
+
+        # General suggestions
+        diagnostics.append("\\n📋 TROUBLESHOOTING STEPS:")
+        diagnostics.append("   1. Check the STDERR and STDOUT logs above for specific errors")
+        diagnostics.append("   2. Verify all dependencies are installed in the virtual environment")
+        diagnostics.append(
+            "   3. Test the agent configuration with: atoll --agent <config_path> --test"
+        )
+        diagnostics.append("   4. Check system logs for more details")
+
+        if agent.config_path:
+            diagnostics.append(
+                f"   5. Review agent documentation: {agent.config_path.parent / 'README.md'}"
+            )
+
+        return "\\n".join(diagnostics)
 
     async def check_remote_server(self, remote: RemoteDeploymentServer) -> dict[str, Any]:
         """Check if remote deployment server is accessible and get its agents.
@@ -536,21 +797,62 @@ class DeploymentServer:
         """
         lines = []
         lines.append("\n" + "=" * 70)
-        lines.append("DEPLOYMENT SERVER STARTUP REPORT")
+        lines.append("DEPLOYMENT INFRASTRUCTURE STATUS")
         lines.append("=" * 70)
 
         # Local server status
-        success, message, port = await self.validate_local_server()
-        lines.append("\n[LOCAL DEPLOYMENT SERVER]")
+        success, message, base_port = await self.validate_local_server()
+        lines.append("\n[DEPLOYMENT SERVER]")
+        lines.append("  Type: Local Process Manager + REST API")
+        lines.append("  Function: Manages agent lifecycle and provides remote deployment API")
         if success:
-            lines.append(f"  Status: ✓ Running on localhost:{port}")
+            lines.append("  Status: ✓ Running")
+            lines.append(f"  Host: {self.config.host}")
+            lines.append(f"  REST API: http://{self.config.host}:{self.config.api_port}")
+            lines.append("  API Endpoints:")
+            lines.append("    → POST /agents/deploy - Deploy agent package")
+            lines.append("    → GET /agents - List all agents")
+            lines.append("    → POST /agents/{name}/start - Start agent")
+            lines.append("    → POST /agents/{name}/stop - Stop agent")
             lines.append(f"  Agents Directory: {self.config.agents_directory or 'Not configured'}")
-            lines.append(f"  Active Agents: {len(self.agents)}")
-            if self.agents:
-                for name, agent in self.agents.items():
-                    is_running = agent.process and agent.process.poll() is None
-                    status_icon = "●" if is_running else "○"
-                    lines.append(f"    {status_icon} {name} (Port: {agent.port})")
+            lines.append(
+                f"  Agent Port Range: {base_port}-{base_port + self.config.max_agents - 1}"
+            )
+            lines.append(f"  Managed Agents: {len(self.agents)}")
+            lines.append(
+                f"  Running Agents: {len([a for a in self.agents.values() if a.status == 'running'])}"
+            )
+        else:
+            lines.append(f"  Status: ✗ FAILED - {message}")
+            lines.append("  Action Required: Fix the issue above and restart ATOLL")
+
+        # Agent servers status
+        if self.agents:
+            lines.append("\n[AGENT SERVERS] (Individual API Endpoints)")
+            for name, agent in self.agents.items():
+                is_running = agent.process and agent.process.poll() is None
+                if is_running:
+                    status_icon = "✓"
+                    status_text = "Running"
+                elif agent.status == "failed":
+                    status_icon = "✗"
+                    status_text = "Failed to start"
+                else:
+                    status_icon = "○"
+                    status_text = "Stopped"
+
+                lines.append(f"\n  {status_icon} {name}")
+                if agent.port:
+                    lines.append(f"     → API Endpoint: http://{self.config.host}:{agent.port}")
+                    lines.append(f"     → Port: {agent.port}")
+                if agent.pid:
+                    lines.append(f"     → Process ID: {agent.pid}")
+                lines.append(f"     → Status: {status_text}")
+                if agent.error_message:
+                    lines.append(f"     → Error: {agent.error_message}")
+                    if agent.error_details:
+                        lines.append(f"\n{agent.error_details}")
+
         else:
             lines.append(f"  Status: ✗ FAILED - {message}")
             lines.append("  Action Required: Fix the issue above and restart ATOLL")
