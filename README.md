@@ -12,7 +12,7 @@
 
 **✨ NEW in v2.0:** REST API for remote agent management, ZIP package deployment, MD5 checksum tracking, and virtual environment isolation!
 
-[Features](#features) • [Quick Start](#quick-start) • [v2.0 Features](#v20-deployment-server) • [Documentation](#documentation) • [Contributing](#contributing)
+[Features](#features) • [Installation](#installation) • [Quick Start](#quick-start) • [v2.0 Features](#v20-deployment-server) • [Documentation](#documentation) • [Contributing](#contributing)
 
 </div>
 
@@ -22,9 +22,9 @@
 
 - [Overview](#overview)
 - [Features](#features)
-- [Prerequisites](#prerequisites)
+- [Installation](#installation)
 - [Quick Start](#quick-start)
-  - [Installation](#installation)
+  - [Basic Installation](#basic-installation)
   - [Configuration](#configuration)
   - [Usage](#usage)
 - [Terminal Interface](#terminal-interface)
@@ -100,29 +100,42 @@ See [Deployment Server v2.0 Usage Guide](docs/DEPLOYMENT_SERVER_V2_USAGE.md) for
 
 ---
 
-## 📦 Prerequisites
+## 📦 Installation
 
-Before installing ATOLL, ensure you have the following:
+### Quick Installation
 
-### Required
-- **Python 3.9 or higher** - [Download Python](https://www.python.org/downloads/)
-- **Ollama** - Local LLM runtime [Install Ollama](https://ollama.ai/)
-- **pip** - Python package manager (usually included with Python)
+For most users, we recommend using the automated installer or pip (when available):
 
-### Optional
-- **Git** - For cloning the repository
-- **Virtual Environment** - Recommended for isolation (venv, conda, etc.)
+```bash
+# Clone the repository
+git clone https://github.com/Buttje/ATOLL.git
+cd ATOLL
 
-### System Requirements
-- **OS**: Linux, macOS, or Windows (with WSL recommended)
-- **RAM**: Minimum 8GB (16GB recommended for larger models)
-- **Disk**: ~2GB for installation + space for LLM models
+# Run the automated installer
+python install.py
+```
+
+### Prerequisites
+
+- **Python 3.9+** - [Download](https://www.python.org/downloads/)
+- **Ollama** - [Install Ollama](https://ollama.ai/)
+- **8GB+ RAM** (16GB recommended)
+
+### Comprehensive Installation Guide
+
+📚 **For detailed installation instructions including:**
+- Platform-specific setup (Linux/Windows)
+- Running as a system service (systemd/Windows Service)
+- Deployment server configuration
+- Troubleshooting common issues
+
+**See the complete [Installation Guide](docs/INSTALLATION.md)**
 
 ---
 
 ## 🚀 Quick Start
 
-### Installation
+### Basic Installation
 
 #### Option 1: Using the Installer (Recommended)
 
@@ -536,13 +549,19 @@ ATOLL/
 
 Comprehensive documentation is available in the `docs/` directory:
 
-### Available Guides
+### Installation & Setup
 
-- **[API Reference](docs/api/README.md)** - Detailed API documentation
-- **[User Guide](docs/guides/user_guide.md)** - Complete user manual
-- **[Developer Guide](docs/guides/developer_guide.md)** - Contributing and development
-- **[MCP Integration Guide](docs/guides/mcp_integration.md)** - Setting up MCP servers
-- **[Configuration Reference](docs/guides/configuration.md)** - Configuration options
+- **[Installation Guide](docs/INSTALLATION.md)** - Complete installation instructions for Linux and Windows
+  - Prerequisites and system requirements
+  - Multiple installation methods (pip, installer, manual)
+  - Running as a system service (systemd/Windows Service)
+  - Configuration guide
+  - Troubleshooting
+
+### Deployment & Usage
+
+- **[Deployment Server V2 Usage Guide](docs/DEPLOYMENT_SERVER_V2_USAGE.md)** - Remote agent management with REST API
+- **[Deployment Quick Reference](docs/DEPLOYMENT_QUICK_REFERENCE.md)** - Quick reference for deployment commands
 
 ### Quick Links
 
