@@ -8,6 +8,10 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from .logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def get_venv_python_path(venv_path: Path) -> Path:
     """Get the Python interpreter path in a virtual environment.
@@ -107,10 +111,12 @@ def verify_venv_exists(venv_path: Path) -> bool:
     if not python_path.exists():
         return False
 
-    # Check for pip (optional but recommended)
+    # Check for pip (recommended but not strictly required)
     pip_path = get_venv_pip_path(venv_path)
+    if not pip_path.exists():
+        logger.warning(f"Virtual environment at {venv_path} does not have pip installed")
 
-    # Consider venv valid even without pip, but log warning
+    # Consider venv valid even without pip
     return True
 
 

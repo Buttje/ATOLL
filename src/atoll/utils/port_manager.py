@@ -6,7 +6,7 @@ ensuring ports are properly allocated and released across the deployment lifecyc
 
 import socket
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional
 
 from ..utils.logger import get_logger
 
@@ -29,7 +29,7 @@ class PortManager:
         """
         self.base_port = base_port
         self.max_ports = max_ports
-        self.allocated_ports: Set[int] = set()
+        self.allocated_ports: set[int] = set()
         self.port_assignments: dict[str, int] = {}  # agent_name -> port
         self.registry_path: Optional[Path] = None
 
@@ -140,7 +140,7 @@ class PortManager:
         """
         return port in self.allocated_ports
 
-    def get_allocated_ports(self) -> Set[int]:
+    def get_allocated_ports(self) -> set[int]:
         """Get set of all currently allocated ports.
 
         Returns:

@@ -10,6 +10,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+from atoll import __version__
 from .server import DeploymentServer, DeploymentServerConfig
 
 
@@ -81,7 +82,7 @@ For more information, visit: https://github.com/Buttje/ATOLL
     parser.add_argument(
         "--version",
         action="version",
-        version="ATOLL Deployment Server 2.0.0",
+        version=f"ATOLL Deployment Server {__version__}",
     )
 
     args = parser.parse_args()
@@ -113,7 +114,7 @@ For more information, visit: https://github.com/Buttje/ATOLL
 
     # Print startup banner
     print("=" * 70)
-    print("ATOLL Deployment Server v2.0.0")
+    print(f"ATOLL Deployment Server v{__version__}")
     print("=" * 70)
     print(f"API Server: http://{config.host}:{config.api_port}")
     print(f"Agents Directory: {config.agents_directory}")
