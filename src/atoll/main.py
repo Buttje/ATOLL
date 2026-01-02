@@ -16,6 +16,7 @@ from .mcp.server_manager import MCPServerManager
 from .ui.colors import ColorScheme
 from .ui.terminal import TerminalUI, UIMode
 from .utils.logger import setup_logging
+from .utils.version_check import check_all_compatibility, log_version_info
 
 # Suppress ResourceWarning for unclosed transports on Windows
 # This is a known issue with ProactorEventLoop subprocess cleanup
@@ -40,6 +41,11 @@ class Application:
     async def startup(self) -> None:
         """Perform startup sequence."""
         print(self.colors.header("Starting ATOLL..."))
+
+        # Check version compatibility
+        if not check_all_compatibility():
+            print(self.colors.error("Critical compatibility issues detected. Please resolve them before continuing."))
+            sys.exit(1)
 
         # Load configurations
         self.config_manager.load_configs()

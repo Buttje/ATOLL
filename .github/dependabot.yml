@@ -1,0 +1,54 @@
+version: 2
+
+updates:
+  # Enable version updates for Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Buttje"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    # Group minor and patch updates together
+    groups:
+      langchain:
+        patterns:
+          - "langchain*"
+      testing:
+        patterns:
+          - "pytest*"
+      linting:
+        patterns:
+          - "ruff"
+          - "black"
+          - "mypy"
+          - "pre-commit"
+    # Auto-merge minor and patch updates for known stable packages
+    ignore:
+      # Ignore major version updates for stable packages
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Buttje"
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "github-actions"
