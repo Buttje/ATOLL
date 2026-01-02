@@ -17,6 +17,7 @@ from typing import Optional
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from ..utils.venv_utils import get_venv_pip_path
 from .server import AgentInstance, DeploymentServer
 
 logger = logging.getLogger(__name__)
@@ -126,11 +127,8 @@ class DeploymentServerAPI:
                 print(f"  → Requirements file: {requirements_file}")
                 logger.info("Installing dependencies from requirements.txt")
 
-                # Determine pip executable based on platform
-                if sys.platform == "win32":
-                    pip_exe = venv_path / "Scripts" / "pip.exe"
-                else:
-                    pip_exe = venv_path / "bin" / "pip"
+                # Get pip executable using cross-platform utility
+                pip_exe = get_venv_pip_path(venv_path)
 
                 print(f"  → Using pip: {pip_exe}")
                 print("  → Installing packages (this may take a while)...")

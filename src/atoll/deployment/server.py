@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 from ..config.models import TOMLAgentConfig
 from ..utils.logger import get_logger
+from ..utils.venv_utils import get_venv_pip_path
 
 logger = get_logger(__name__)
 
@@ -719,12 +720,8 @@ class DeploymentServer:
                 )
                 if agent.config_path:
                     venv_path = agent.config_path.parent / ".venv"
-                    if sys.platform == "win32":
-                        diagnostics.append(
-                            f"   {venv_path}\\\\Scripts\\\\pip.exe install -r requirements.txt"
-                        )
-                    else:
-                        diagnostics.append(f"   {venv_path}/bin/pip install -r requirements.txt")
+                    pip_exe = get_venv_pip_path(venv_path)
+                    diagnostics.append(f"   {pip_exe} install -r requirements.txt")
 
             elif "pydantic" in stderr_lower and "v1" in stderr_lower:
                 diagnostics.append("\\n💡 LIKELY CAUSE: Pydantic V1 compatibility with Python 3.14+")
