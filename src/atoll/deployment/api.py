@@ -10,6 +10,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import venv
 import zipfile
 from datetime import datetime
@@ -18,9 +19,11 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, File, HTTPException, Security, UploadFile, status
 from fastapi.security import APIKeyHeader
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from ..utils.venv_utils import get_venv_pip_path
+from .metrics import get_metrics, get_metrics_content, is_prometheus_available
 from .server import AgentInstance, DeploymentServer
 
 logger = logging.getLogger(__name__)
@@ -87,6 +90,9 @@ class DeploymentServerAPI:
                 "Set ATOLL_API_KEY environment variable or disable auth."
             )
 
+        # Metrics
+        self.metrics = get_metrics()
+
         # Checksum database
         self.checksum_db_path = storage_path / "checksums.json"
         self.checksums: dict[str, str] = self._load_checksums()
@@ -119,6 +125,7 @@ class DeploymentServerAPI:
 
         # No API key in request
         if not api_key:
+            self.metrics.record_auth_attempt("failure")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="API key required. Provide X-API-Key header.",
@@ -127,11 +134,13 @@ class DeploymentServerAPI:
         # Invalid API key
         if api_key != self.api_key:
             logger.warning(f"Invalid API key attempt: {api_key[:10]}...")
+            self.metrics.record_auth_attempt("failure")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid API key",
             )
 
+        self.metrics.record_auth_attempt("success")
         return True
 
     def _load_checksums(self) -> dict[str, str]:
@@ -226,7 +235,41 @@ class DeploymentServerAPI:
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint (no authentication required)."""
-            return {"status": "healthy", "version": "2.0.0", "auth_enabled": self.require_auth}
+            self.metrics.health_checks_total.labels(status="success").inc()
+            return {
+                "status": "healthy",
+                "version": "2.0.0",
+                "auth_enabled": self.require_auth,
+                "metrics_enabled": is_prometheus_available(),
+            }
+
+        @self.app.get("/metrics")
+        async def metrics_endpoint():
+            """Prometheus metrics endpoint (no authentication required).
+
+            Returns metrics in Prometheus exposition format for scraping.
+            Install prometheus-client to enable: pip install atoll[monitoring]
+            """
+            # Update agent count metrics before serving
+            status_counts = {}
+            for agent in self.server.agents.values():
+                status = agent.status
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            self.metrics.update_agent_counts(status_counts)
+            self.metrics.set_allocated_ports(len(self.server.port_manager.allocated_ports))
+
+            # Count active processes
+            active_count = sum(
+                1
+                for agent in self.server.agents.values()
+                if agent.process and agent.process.poll() is None
+            )
+            self.metrics.set_active_processes(active_count)
+
+            # Return metrics in Prometheus format
+            content, content_type = get_metrics_content()
+            return Response(content=content, media_type=content_type)
 
         @self.app.get("/agents", dependencies=[Depends(self._verify_api_key)])
         async def list_agents():
@@ -318,6 +361,8 @@ class DeploymentServerAPI:
                             print(f"  ✓ Agent '{name}' already installed with this checksum")
                             print("    Use force=true to reinstall")
                             logger.info(f"Agent {name} already installed with this checksum")
+                            self.metrics.record_deployment("cached")
+                            self.metrics.checksum_cache_hits.inc()
                             return {
                                 "status": "already_installed",
                                 "name": name,
@@ -407,6 +452,11 @@ class DeploymentServerAPI:
                 print(f"{'='*70}\n")
                 logger.info(f"Successfully deployed agent {agent_name}")
 
+                # Record metrics
+                duration = time.time() - start_time
+                self.metrics.record_deployment("success", duration)
+                self.metrics.checksum_cache_misses.inc()
+
                 return {
                     "status": "deployed",
                     "name": agent_name,
@@ -416,9 +466,11 @@ class DeploymentServerAPI:
                 }
 
             except HTTPException:
+                self.metrics.record_deployment("failure")
                 raise
             except Exception as e:
                 logger.error(f"Deployment failed: {e}")
+                self.metrics.record_deployment("failure")
                 raise HTTPException(status_code=500, detail=f"Deployment failed: {str(e)}")
             finally:
                 # Clean up temp file
@@ -430,6 +482,7 @@ class DeploymentServerAPI:
             success = await self.server.start_agent(request.agent_name)
             if success:
                 agent = self.server.agents[request.agent_name]
+                self.metrics.record_agent_start("success")
                 return {
                     "status": "started",
                     "name": request.agent_name,
@@ -439,6 +492,9 @@ class DeploymentServerAPI:
             else:
                 agent = self.server.agents.get(request.agent_name)
                 error_msg = agent.error_message if agent else "Agent not found"
+                self.metrics.record_agent_start("failure")
+                if agent:
+                    self.metrics.record_agent_failure(request.agent_name, error_msg or "unknown")
                 raise HTTPException(status_code=500, detail=f"Failed to start agent: {error_msg}")
 
         @self.app.post("/stop", dependencies=[Depends(self._verify_api_key)])
@@ -446,6 +502,7 @@ class DeploymentServerAPI:
             """Stop an agent."""
             success = await self.server.stop_agent(request.agent_name)
             if success:
+                self.metrics.agent_stops_total.inc()
                 return {
                     "status": "stopped",
                     "name": request.agent_name,
@@ -459,6 +516,7 @@ class DeploymentServerAPI:
             success = await self.server.restart_agent(request.agent_name)
             if success:
                 agent = self.server.agents[request.agent_name]
+                self.metrics.agent_restarts_total.inc()
                 return {
                     "status": "restarted",
                     "name": request.agent_name,
