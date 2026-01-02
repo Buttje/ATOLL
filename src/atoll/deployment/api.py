@@ -93,7 +93,10 @@ class DeploymentServerAPI:
         # Metrics
         self.metrics = get_metrics()
 
-        # Checksum database
+        # Persistent storage - use deployment server's metadata store
+        # Checksum database is now part of metadata store
+
+        # Create FastAPI app
         self.checksum_db_path = storage_path / "checksums.json"
         self.checksums: dict[str, str] = self._load_checksums()
 
