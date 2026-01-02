@@ -128,12 +128,14 @@ class TestMCPClientExtended:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                tools = await client.list_tools()
-                assert len(tools) == 2
-                assert tools[0]["name"] == "tool1"
-                assert tools[1]["name"] == "tool2"
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            tools = await client.list_tools()
+            assert len(tools) == 2
+            assert tools[0]["name"] == "tool1"
+            assert tools[1]["name"] == "tool2"
 
     @pytest.mark.asyncio
     async def test_list_tools_not_connected(self):
@@ -183,9 +185,11 @@ class TestMCPClientExtended:
         client.process = mock_process
 
         # Mock error response
-        with patch.object(client, "_receive_message", return_value={"error": "Test error"}):
-            with pytest.raises(RuntimeError, match="Tool call error"):
-                await client.call_tool("test_tool", {})
+        with (
+            patch.object(client, "_receive_message", return_value={"error": "Test error"}),
+            pytest.raises(RuntimeError, match="Tool call error"),
+        ):
+            await client.call_tool("test_tool", {})
 
     @pytest.mark.asyncio
     async def test_call_tool_no_response(self):
@@ -207,6 +211,8 @@ class TestMCPClientExtended:
         client.process = mock_process
 
         # Mock no response
-        with patch.object(client, "_receive_message", return_value=None):
-            with pytest.raises(RuntimeError, match="No response"):
-                await client.call_tool("test_tool", {})
+        with (
+            patch.object(client, "_receive_message", return_value=None),
+            pytest.raises(RuntimeError, match="No response"),
+        ):
+            await client.call_tool("test_tool", {})

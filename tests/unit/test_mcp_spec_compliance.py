@@ -98,17 +98,19 @@ class TestMCPSpecCompliance:
             },
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=tools_response):
-                tools = await client.list_tools()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=tools_response),
+        ):
+            tools = await client.list_tools()
 
-                # Verify correct request was sent
-                mock_send.assert_called_once()
-                request = mock_send.call_args[0][0]
+            # Verify correct request was sent
+            mock_send.assert_called_once()
+            request = mock_send.call_args[0][0]
 
-                assert request["jsonrpc"] == "2.0"
-                assert request["method"] == "tools/list"
-                assert request["params"] == {}
+            assert request["jsonrpc"] == "2.0"
+            assert request["method"] == "tools/list"
+            assert request["params"] == {}
 
                 # Verify tools were parsed correctly
                 assert len(tools) == 1
@@ -149,8 +151,10 @@ class TestMCPSpecCompliance:
         # list_tools should still query the server
         tools_response = {"result": {"tools": [{"name": "correct_tool"}]}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=tools_response):
-                tools = await client.list_tools()
-                assert len(tools) == 1
-                assert tools[0]["name"] == "correct_tool"
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=tools_response),
+        ):
+            tools = await client.list_tools()
+            assert len(tools) == 1
+            assert tools[0]["name"] == "correct_tool"

@@ -16,14 +16,16 @@ class TestApplicationExtended:
     @pytest.mark.asyncio
     async def test_startup_with_mcp_servers(self):
         """Test startup with MCP servers configured."""
-        with patch("atoll.config.manager.ConfigManager") as mock_config_manager:
-            with patch("atoll.ui.terminal.TerminalUI"):
-                # Mock config manager
-                mock_config_instance = mock_config_manager.return_value
-                mock_config_instance.ollama_config = Mock(
-                    base_url="http://localhost", port=11434, model="test-model"
-                )
-                mock_config_instance.mcp_config = Mock(servers={})
+        with (
+            patch("atoll.config.manager.ConfigManager") as mock_config_manager,
+            patch("atoll.ui.terminal.TerminalUI"),
+        ):
+            # Mock config manager
+            mock_config_instance = mock_config_manager.return_value
+            mock_config_instance.ollama_config = Mock(
+                base_url="http://localhost", port=11434, model="test-model"
+            )
+            mock_config_instance.mcp_config = Mock(servers={})
                 mock_config_instance.load_configs = Mock()
 
                 # Mock MCP server manager

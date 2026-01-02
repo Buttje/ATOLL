@@ -1,8 +1,7 @@
 """Tests for port allocation and management."""
 
 import socket
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -178,9 +177,11 @@ class TestPortExhaustion:
         manager.allocate_port("agent2")
 
         # Mock all ports as unavailable
-        with patch.object(manager, "_is_port_available", return_value=False):
-            with pytest.raises(RuntimeError, match="No available ports"):
-                manager.allocate_port("agent3")
+        with (
+            patch.object(manager, "_is_port_available", return_value=False),
+            pytest.raises(RuntimeError, match="No available ports"),
+        ):
+            manager.allocate_port("agent3")
 
     def test_released_port_can_be_reallocated(self):
         """Test that released ports can be allocated again."""

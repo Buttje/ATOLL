@@ -35,12 +35,14 @@ class TestMCPResources:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_resources()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_resources()
 
-                assert len(result["resources"]) == 1
-                assert result["resources"][0]["uri"] == "file:///example.txt"
+            assert len(result["resources"]) == 1
+            assert result["resources"][0]["uri"] == "file:///example.txt"
 
     @pytest.mark.asyncio
     async def test_list_resources_with_pagination(self):
@@ -57,14 +59,16 @@ class TestMCPResources:
             "result": {"resources": [{"uri": "file:///test.txt"}], "nextCursor": "page2"}
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_resources(cursor="page1")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_resources(cursor="page1")
 
-                # Verify cursor was passed in request
-                request = mock_send.call_args[0][0]
-                assert request["params"]["cursor"] == "page1"
-                assert result["nextCursor"] == "page2"
+            # Verify cursor was passed in request
+            request = mock_send.call_args[0][0]
+            assert request["params"]["cursor"] == "page1"
+            assert result["nextCursor"] == "page2"
 
     @pytest.mark.asyncio
     async def test_list_resources_not_connected(self):
@@ -102,14 +106,16 @@ class TestMCPResources:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.read_resource("file:///example.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.read_resource("file:///example.txt")
 
-                # Verify request format
-                request = mock_send.call_args[0][0]
-                assert request["method"] == "resources/read"
-                assert request["params"]["uri"] == "file:///example.txt"
+            # Verify request format
+            request = mock_send.call_args[0][0]
+            assert request["method"] == "resources/read"
+            assert request["params"]["uri"] == "file:///example.txt"
 
                 # Verify response
                 assert len(result["contents"]) == 1
@@ -141,10 +147,12 @@ class TestMCPResources:
 
         mock_response = {"error": {"code": -32002, "message": "Resource not found"}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                with pytest.raises(RuntimeError, match="Resource read error"):
-                    await client.read_resource("file:///nonexistent.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+            pytest.raises(RuntimeError, match="Resource read error"),
+        ):
+            await client.read_resource("file:///nonexistent.txt")
 
     @pytest.mark.asyncio
     async def test_subscribe_resource_success(self):
@@ -160,11 +168,13 @@ class TestMCPResources:
 
         mock_response = {"result": {}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.subscribe_resource("file:///example.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.subscribe_resource("file:///example.txt")
 
-                assert result is True
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_subscribe_resource_not_supported(self):
@@ -194,9 +204,11 @@ class TestMCPResources:
 
         mock_response = {"result": {}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.unsubscribe_resource("file:///example.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.unsubscribe_resource("file:///example.txt")
 
                 assert result is True
 
@@ -223,9 +235,11 @@ class TestMCPResources:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_resource_templates()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_resource_templates()
 
                 assert len(result) == 1
                 assert result[0]["uriTemplate"] == "file:///{path}"
@@ -259,12 +273,14 @@ class TestMCPPrompts:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_prompts()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_prompts()
 
-                assert len(result["prompts"]) == 1
-                assert result["prompts"][0]["name"] == "code_review"
+            assert len(result["prompts"]) == 1
+            assert result["prompts"][0]["name"] == "code_review"
 
     @pytest.mark.asyncio
     async def test_list_prompts_with_pagination(self):

@@ -333,9 +333,9 @@ class TOMLAgentConfig:
 
                 with open(file_path, "rb") as f:
                     data = tomli.load(f)
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     "tomli package required for Python <3.11. Install with: pip install tomli"
-                )
+                ) from err
 
         return cls.from_dict(data)

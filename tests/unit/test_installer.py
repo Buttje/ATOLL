@@ -140,15 +140,15 @@ class TestMCPInstaller:
         installer.agent = mock_agent
 
         # Mock prerequisite checks
-        with patch.object(installer, "_check_nodejs_installed", return_value=True):
-            with patch.object(installer, "_check_pnpm_installed", return_value=True):
-                with patch.object(installer, "_detect_container_runtime", return_value=None):
-                    with patch.object(
-                        installer, "_resolve_placeholders", return_value="npm install"
-                    ):
-                        command = await installer._extract_install_command(readme, tmp_path)
-                        assert command == "npm install"
-                        mock_agent.process_prompt.assert_called_once()
+        with (
+            patch.object(installer, "_check_nodejs_installed", return_value=True),
+            patch.object(installer, "_check_pnpm_installed", return_value=True),
+            patch.object(installer, "_detect_container_runtime", return_value=None),
+            patch.object(installer, "_resolve_placeholders", return_value="npm install"),
+        ):
+            command = await installer._extract_install_command(readme, tmp_path)
+            assert command == "npm install"
+            mock_agent.process_prompt.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_extract_install_command_none(self, installer, tmp_path, mock_agent):
@@ -481,10 +481,12 @@ class TestMCPInstaller:
         """Test Node.js installation prompt on Windows."""
         installer.os_type = "Windows"
 
-        with patch("builtins.input", return_value=""):
-            with patch.object(installer, "_check_nodejs_installed", return_value=True):
-                result = await installer._install_nodejs()
-                assert result is True
+        with (
+            patch("builtins.input", return_value=""),
+            patch.object(installer, "_check_nodejs_installed", return_value=True),
+        ):
+            result = await installer._install_nodejs()
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_install_nodejs_skip(self, installer):
@@ -496,13 +498,15 @@ class TestMCPInstaller:
     @pytest.mark.asyncio
     async def test_install_pnpm_success(self, installer):
         """Test successful pnpm installation."""
-        with patch.object(installer, "_check_nodejs_installed", return_value=True):
-            with patch.object(installer, "_check_npm_installed", return_value=True):
-                with patch("subprocess.run") as mock_run:
-                    mock_run.return_value = Mock(returncode=0)
-                    with patch.object(installer, "_check_pnpm_installed", return_value=True):
-                        result = await installer._install_pnpm()
-                        assert result is True
+        with (
+            patch.object(installer, "_check_nodejs_installed", return_value=True),
+            patch.object(installer, "_check_npm_installed", return_value=True),
+            patch("subprocess.run") as mock_run,
+            patch.object(installer, "_check_pnpm_installed", return_value=True),
+        ):
+            mock_run.return_value = Mock(returncode=0)
+            result = await installer._install_pnpm()
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_install_pnpm_no_nodejs(self, installer):
@@ -515,12 +519,14 @@ class TestMCPInstaller:
     @pytest.mark.asyncio
     async def test_install_pnpm_no_npm(self, installer):
         """Test pnpm installation without npm."""
-        with patch.object(installer, "_check_nodejs_installed", return_value=True):
-            with patch.object(installer, "_check_npm_installed", return_value=False):
-                with patch("builtins.input", return_value=""):
-                    with patch.object(installer, "_check_pnpm_installed", return_value=True):
-                        result = await installer._install_pnpm()
-                        assert result is True
+        with (
+            patch.object(installer, "_check_nodejs_installed", return_value=True),
+            patch.object(installer, "_check_npm_installed", return_value=False),
+            patch("builtins.input", return_value=""),
+            patch.object(installer, "_check_pnpm_installed", return_value=True),
+        ):
+            result = await installer._install_pnpm()
+            assert result is True
 
     def test_find_setup_script_windows(self, installer, tmp_path):
         """Test finding Windows setup script."""
@@ -587,16 +593,18 @@ class TestMCPInstaller:
         installer.agent = mock_agent
         mock_agent.process_prompt.return_value = "pnpm install && pnpm run build"
 
-        with patch.object(installer, "_check_nodejs_installed", return_value=True):
-            with patch.object(installer, "_check_pnpm_installed", return_value=True):
-                with patch.object(installer, "_detect_container_runtime", return_value=None):
-                    with patch.object(
-                        installer,
-                        "_resolve_placeholders",
-                        return_value="pnpm install && pnpm run build",
-                    ):
-                        result = await installer._extract_install_command(readme, test_dir)
-                        assert result == "pnpm install && pnpm run build"
+        with (
+            patch.object(installer, "_check_nodejs_installed", return_value=True),
+            patch.object(installer, "_check_pnpm_installed", return_value=True),
+            patch.object(installer, "_detect_container_runtime", return_value=None),
+            patch.object(
+                installer,
+                "_resolve_placeholders",
+                return_value="pnpm install && pnpm run build",
+            ),
+        ):
+            result = await installer._extract_install_command(readme, test_dir)
+            assert result == "pnpm install && pnpm run build"
 
     @pytest.mark.asyncio
     async def test_execute_install_command_pnpm_not_found(self, installer, tmp_path):

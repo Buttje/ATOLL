@@ -7,7 +7,6 @@ import hashlib
 import json
 import logging
 import subprocess
-import sys
 import tempfile
 import venv
 import zipfile
@@ -361,7 +360,7 @@ class DeploymentServerAPI:
                 raise
             except Exception as e:
                 logger.error(f"Deployment failed: {e}")
-                raise HTTPException(status_code=500, detail=f"Deployment failed: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Deployment failed: {str(e)}") from e
             finally:
                 # Clean up temp file
                 tmp_path.unlink(missing_ok=True)

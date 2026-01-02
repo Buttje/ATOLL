@@ -128,8 +128,8 @@ class TestConfigManager:
         assert data["base_url"] == "http://save-test"
         assert data["port"] == 9999
 
-    def test_load_config_error_handling(self, tmp_path):
-        """Test error handling when loading configs."""
+    def test_load_config_error_handling_with_invalid_json(self, tmp_path):
+        """Test error handling when loading configs with invalid JSON."""
         config_file = tmp_path / "bad.json"
         config_file.write_text("invalid json")
 

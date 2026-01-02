@@ -1,10 +1,7 @@
 """Tests for cross-platform virtual environment utilities."""
 
-import sys
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from atoll.utils.venv_utils import (
     find_venv_in_directory,
