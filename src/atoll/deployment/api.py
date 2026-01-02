@@ -428,6 +428,47 @@ class DeploymentServerAPI:
                 error_message=agent.error_message,
             )
 
+        @self.app.get("/agents/{agent_name}/diagnostics")
+        async def get_agent_diagnostics(agent_name: str):
+            """Get diagnostic information for a failed agent.
+
+            Args:
+                agent_name: Name of the agent
+
+            Returns:
+                Diagnostic information with logs and analysis
+            """
+            from ..utils.sanitizer import sanitize_diagnostics
+
+            if agent_name not in self.server.agents:
+                raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+
+            agent = self.server.agents[agent_name]
+
+            # Generate diagnostics
+            diagnostics_text = self.server._generate_diagnostics(agent)
+
+            # Build diagnostic response
+            diagnostics = {
+                "agent_name": agent_name,
+                "status": agent.status,
+                "error_message": agent.error_message,
+                "exit_code": agent.exit_code,
+                "stdout": agent.stdout_log or "",
+                "stderr": agent.stderr_log or "",
+                "diagnostics_analysis": diagnostics_text,
+                "config_path": str(agent.config_path) if agent.config_path else None,
+                "pid": agent.pid,
+                "port": agent.port,
+                "restart_count": agent.restart_count,
+                "start_time": agent.start_time.isoformat() if agent.start_time else None,
+            }
+
+            # Sanitize to remove sensitive information
+            sanitized = sanitize_diagnostics(diagnostics)
+
+            return sanitized
+
 
 async def run_api_server(
     deployment_server: DeploymentServer,
