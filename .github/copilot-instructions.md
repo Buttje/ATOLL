@@ -1,5 +1,103 @@
 # ATOLL Development Instructions
 
+## Table of Contents
+1. [Quick Start](#quick-start)
+2. [Installation & Setup](#installation--setup)
+3. [Architecture Overview](#architecture-overview)
+4. [Critical Patterns](#critical-patterns)
+5. [Development Workflows](#development-workflows)
+6. [Testing Patterns](#testing-patterns)
+7. [Common Pitfalls](#common-pitfalls)
+8. [Security Considerations](#security-considerations)
+9. [Troubleshooting](#troubleshooting)
+10. [Common Development Tasks](#common-development-tasks)
+11. [Contribution Workflow](#contribution-workflow)
+12. [Key Files Reference](#key-files-reference)
+13. [Performance Requirements](#performance-requirements)
+
+## Quick Start
+
+**First Time Setup:**
+```bash
+# 1. Clone repository
+git clone https://github.com/Buttje/ATOLL.git
+cd ATOLL
+
+# 2. Install dependencies (creates venv automatically)
+python install.py
+
+# 3. Verify Ollama is running (required)
+ollama serve  # In separate terminal
+ollama pull llama2  # Or your preferred model
+
+# 4. Run ATOLL
+atoll
+```
+
+**Development Workflow:**
+```bash
+# Run tests before making changes
+pytest --cov=src --cov-report=html
+
+# Make your changes, then run pre-commit checks
+pre-commit run --all-files
+
+# Run tests again to verify
+pytest tests/unit/test_your_module.py -v
+
+# Submit PR when ready
+```
+
+## Installation & Setup
+
+### Prerequisites
+- **Python 3.9+** (3.12 recommended)
+- **Ollama** - [Install from ollama.ai](https://ollama.ai/)
+- **8GB+ RAM** (16GB recommended for larger models)
+
+### Development Environment Setup
+
+```bash
+# Install with development dependencies
+pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+
+# Verify installation
+atoll --help
+pytest --version
+```
+
+### Configuration Files
+
+**Ollama Config** (`~/.ollama_server/.ollama_config.json`):
+```json
+{
+  "base_url": "http://localhost",
+  "port": 11434,
+  "model": "llama2",
+  "request_timeout": 30,
+  "max_tokens": 2048
+}
+```
+
+**MCP Config** (`mcp.json` in project root):
+```json
+{
+  "mcpServers": {
+    "example-server": {
+      "command": "node",
+      "args": ["/path/to/mcp-server/index.js"],
+      "env": {},
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+Configuration is auto-created with defaults on first run. Environment variables in MCP commands are expanded automatically.
+
 ## Architecture Overview
 
 ATOLL is a LangChain-based AI agent that bridges Ollama LLMs with MCP (Model Context Protocol) servers. The architecture follows a layered design:
@@ -135,6 +233,199 @@ except json.JSONDecodeError:
 - Use `langchain-ollama` package (not `langchain-community.llms.Ollama`)
 - Prefer `HumanMessage`/`AIMessage` for conversation history
 - Tool wrappers must extend `BaseTool` and implement `_arun()` for async
+
+## Security Considerations
+
+### Input Validation
+- All user inputs are sanitized through Pydantic dataclasses
+- MCP tool arguments validated against JSON schemas
+- Configuration files validated on load with clear error messages
+
+### Credential Management
+- Never store API keys or secrets in configuration files
+- Use environment variables for sensitive data: `os.environ.get("API_KEY")`
+- MCP server commands support env var expansion: `"env": {"API_KEY": "$API_KEY"}`
+- Reasoning engine flags security-sensitive operations (password, credential keywords)
+
+### Subprocess Security
+- MCP stdio servers run in isolated subprocesses with controlled environment
+- stderr/stdout captured to prevent information leakage
+- Process termination handled gracefully on shutdown
+- No shell injection: use `asyncio.create_subprocess_exec()` with arg lists
+
+### Dependency Security
+- Keep dependencies updated (see `pyproject.toml`)
+- Run `pip-audit` before adding new dependencies
+- Review MCP server code before adding to `mcp.json`
+
+## Troubleshooting
+
+### Common Issues
+
+**1. "Model not found" error**
+```bash
+# List available models
+ollama list
+
+# Pull missing model
+ollama pull llama2
+
+# Update config to use available model
+atoll  # Then use: changemodel <name>
+```
+
+**2. MCP server fails to start**
+```bash
+# Check server installation
+node /path/to/server/index.js  # Test directly
+
+# Verify mcp.json paths are absolute
+# Verify environment variables are set
+
+# Check logs in terminal (stderr is captured)
+```
+
+**3. Async test failures**
+```python
+# Always use pytest.mark.asyncio for async tests
+@pytest.mark.asyncio
+async def test_my_async_function():
+    result = await my_async_function()
+    assert result == expected
+```
+
+**4. Import errors after installation**
+```bash
+# Reinstall in development mode
+pip install -e ".[dev]"
+
+# Verify PYTHONPATH includes src/
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+```
+
+**5. Windows subprocess issues**
+- Use forward slashes in MCP paths even on Windows
+- Ensure `asyncio` is using ProactorEventLoop on Windows
+- Check that MCP server scripts have proper line endings (LF not CRLF)
+
+### Debug Mode
+
+Enable verbose logging:
+```python
+# In code
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Set in config
+# See src/atoll/utils/logger.py for logger configuration
+```
+
+## Common Development Tasks
+
+### Adding a New Command
+```python
+# 1. Add to Application.handle_command() in main.py
+async def handle_command(self, command: str):
+    parts = command.split()
+    cmd = parts[0].lower()
+    
+    if cmd == "mynewcommand":
+        # Your logic here
+        return
+
+# 2. Add to help text
+# 3. Add unit test in tests/unit/test_main.py
+```
+
+### Adding a New MCP Tool Wrapper
+```python
+# 1. Create tool in src/atoll/mcp/tools.py
+class MyMCPToolWrapper(MCPToolWrapper):
+    def _arun(self, *args, **kwargs):
+        # Async implementation
+        pass
+
+# 2. Register in ToolRegistry
+# 3. Add tests in tests/unit/test_tools.py
+```
+
+### Running Specific Tests
+```bash
+# Single test file
+pytest tests/unit/test_agent.py -v
+
+# Single test function
+pytest tests/unit/test_agent.py::test_function_name -v
+
+# With coverage for one module
+pytest tests/unit/test_agent.py --cov=src/atoll/agent --cov-report=term
+
+# Watch mode for TDD
+pytest-watch tests/unit/
+```
+
+### Debugging Agent Behavior
+```python
+# Add print statements in agent reasoning
+# Check src/atoll/agent/reasoning.py for rule-based analysis
+
+# Use langchain debug mode
+from langchain.globals import set_debug
+set_debug(True)
+
+# Examine conversation memory
+# Check RootAgent.memory in main.py
+```
+
+## Contribution Workflow
+
+### Git Workflow
+```bash
+# 1. Create feature branch from main
+git checkout main
+git pull origin main
+git checkout -b feature/your-feature-name
+
+# 2. Make changes and commit
+git add .
+git commit -m "feat: add new feature"  # Use conventional commits
+
+# 3. Run all checks before pushing
+pre-commit run --all-files
+pytest --cov=src --cov-report=html
+
+# 4. Push and create PR
+git push origin feature/your-feature-name
+# Create PR on GitHub
+```
+
+### Commit Message Convention
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `test:` - Test additions/changes
+- `refactor:` - Code refactoring
+- `chore:` - Maintenance tasks
+
+### Pull Request Guidelines
+1. **Title**: Clear, concise description of changes
+2. **Description**: Explain what, why, and how
+3. **Tests**: Add tests for new functionality
+4. **Coverage**: Maintain >80% code coverage
+5. **Documentation**: Update docs if behavior changes
+6. **Pre-commit**: All checks must pass
+7. **Review**: Address feedback promptly
+
+### Code Review Checklist
+- [ ] Code follows existing patterns
+- [ ] Tests added and passing
+- [ ] Documentation updated
+- [ ] No unnecessary changes
+- [ ] Async/await used correctly
+- [ ] Type hints added
+- [ ] Error handling implemented
+- [ ] Security considerations addressed
 
 ## Key Files Reference
 
