@@ -6,21 +6,28 @@ This module provides HTTP endpoints for remote agent management.
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import sys
 import tempfile
 import venv
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Security, UploadFile, status
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
 from ..utils.venv_utils import get_venv_pip_path
 from .server import AgentInstance, DeploymentServer
 
 logger = logging.getLogger(__name__)
+
+# Security: API Key authentication
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
 # API Models
@@ -51,16 +58,34 @@ class AgentStatusResponse(BaseModel):
 class DeploymentServerAPI:
     """FastAPI application for deployment server."""
 
-    def __init__(self, deployment_server: DeploymentServer, storage_path: Path):
+    def __init__(
+        self,
+        deployment_server: DeploymentServer,
+        storage_path: Path,
+        require_auth: bool = True,
+        api_key: Optional[str] = None,
+    ):
         """Initialize API.
 
         Args:
             deployment_server: The deployment server instance
             storage_path: Path to store agent packages and metadata
+            require_auth: Whether to require API key authentication
+            api_key: The API key to use (or from ATOLL_API_KEY env var)
         """
         self.server = deployment_server
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
+
+        # Authentication configuration
+        self.require_auth = require_auth
+        self.api_key = api_key or os.getenv("ATOLL_API_KEY")
+
+        if self.require_auth and not self.api_key:
+            logger.warning(
+                "Authentication enabled but no API key configured. "
+                "Set ATOLL_API_KEY environment variable or disable auth."
+            )
 
         # Checksum database
         self.checksum_db_path = storage_path / "checksums.json"
@@ -75,6 +100,39 @@ class DeploymentServerAPI:
 
         # Register routes
         self._register_routes()
+
+    def _verify_api_key(self, api_key: Optional[str] = Security(api_key_header)) -> bool:
+        """Verify API key for authentication.
+
+        Args:
+            api_key: API key from request header
+
+        Returns:
+            True if authentication is disabled or key is valid
+
+        Raises:
+            HTTPException: If authentication fails
+        """
+        # Authentication disabled
+        if not self.require_auth:
+            return True
+
+        # No API key in request
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API key required. Provide X-API-Key header.",
+            )
+
+        # Invalid API key
+        if api_key != self.api_key:
+            logger.warning(f"Invalid API key attempt: {api_key[:10]}...")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API key",
+            )
+
+        return True
 
     def _load_checksums(self) -> dict[str, str]:
         """Load checksum database from disk."""
@@ -167,10 +225,10 @@ class DeploymentServerAPI:
 
         @self.app.get("/health")
         async def health_check():
-            """Health check endpoint."""
-            return {"status": "healthy", "version": "2.0.0"}
+            """Health check endpoint (no authentication required)."""
+            return {"status": "healthy", "version": "2.0.0", "auth_enabled": self.require_auth}
 
-        @self.app.get("/agents")
+        @self.app.get("/agents", dependencies=[Depends(self._verify_api_key)])
         async def list_agents():
             """List all agents."""
             agents = []
@@ -187,7 +245,7 @@ class DeploymentServerAPI:
                 )
             return {"agents": agents, "count": len(agents)}
 
-        @self.app.post("/check")
+        @self.app.post("/check", dependencies=[Depends(self._verify_api_key)])
         async def check_agent(checksum: str):
             """Check if agent with checksum exists.
 
@@ -219,7 +277,7 @@ class DeploymentServerAPI:
                     "message": "Agent not found. Upload required.",
                 }
 
-        @self.app.post("/deploy")
+        @self.app.post("/deploy", dependencies=[Depends(self._verify_api_key)])
         async def deploy_agent(file: UploadFile = File(...), force: bool = False):
             """Deploy agent from ZIP package.
 
@@ -366,7 +424,7 @@ class DeploymentServerAPI:
                 # Clean up temp file
                 tmp_path.unlink(missing_ok=True)
 
-        @self.app.post("/start")
+        @self.app.post("/start", dependencies=[Depends(self._verify_api_key)])
         async def start_agent(request: AgentActionRequest):
             """Start an agent."""
             success = await self.server.start_agent(request.agent_name)
@@ -383,7 +441,7 @@ class DeploymentServerAPI:
                 error_msg = agent.error_message if agent else "Agent not found"
                 raise HTTPException(status_code=500, detail=f"Failed to start agent: {error_msg}")
 
-        @self.app.post("/stop")
+        @self.app.post("/stop", dependencies=[Depends(self._verify_api_key)])
         async def stop_agent(request: AgentActionRequest):
             """Stop an agent."""
             success = await self.server.stop_agent(request.agent_name)
@@ -395,7 +453,7 @@ class DeploymentServerAPI:
             else:
                 raise HTTPException(status_code=404, detail="Agent not found or not running")
 
-        @self.app.post("/restart")
+        @self.app.post("/restart", dependencies=[Depends(self._verify_api_key)])
         async def restart_agent(request: AgentActionRequest):
             """Restart an agent."""
             success = await self.server.restart_agent(request.agent_name)
@@ -410,11 +468,61 @@ class DeploymentServerAPI:
             else:
                 raise HTTPException(status_code=500, detail="Failed to restart agent")
 
-        @self.app.get("/status/{agent_name}")
+        @self.app.get("/status/{agent_name}", dependencies=[Depends(self._verify_api_key)])
         async def get_agent_status(agent_name: str):
             """Get status of a specific agent."""
             if agent_name not in self.server.agents:
                 raise HTTPException(status_code=404, detail="Agent not found")
+
+            agent = self.server.agents[agent_name]
+            return {
+                "name": agent_name,
+                "status": agent.status,
+                "port": agent.port,
+                "pid": agent.pid,
+                "checksum": self.checksums.get(agent_name),
+                "start_time": agent.start_time.isoformat() if agent.start_time else None,
+                "restart_count": agent.restart_count,
+                "health_status": agent.health_status,
+                "error_message": agent.error_message,
+            }
+
+        @self.app.get("/agents/{agent_name}/diagnostics", dependencies=[Depends(self._verify_api_key)])
+        async def get_agent_diagnostics(agent_name: str):
+            """Get diagnostic information for an agent.
+
+            Returns detailed diagnostics including:
+            - Configuration validation
+            - Python version compatibility
+            - Port conflict detection
+            - Dependency issues
+            - Captured stdout/stderr logs
+
+            Args:
+                agent_name: Name of the agent
+
+            Returns:
+                Diagnostic report with analysis and recommendations
+            """
+            if agent_name not in self.server.agents:
+                raise HTTPException(status_code=404, detail="Agent not found")
+
+            agent = self.server.agents[agent_name]
+
+            # Generate diagnostics
+            diagnostics_text = self.server._generate_diagnostics(agent)
+
+            return {
+                "agent_name": agent_name,
+                "status": agent.status,
+                "diagnostics": diagnostics_text,
+                "error_message": agent.error_message,
+                "exit_code": agent.exit_code,
+                "stdout": agent.stdout_log,
+                "stderr": agent.stderr_log,
+                "config_path": str(agent.config_path),
+                "timestamp": datetime.now().isoformat(),
+            }
 
             agent = self.server.agents[agent_name]
             is_running = agent.process and agent.process.poll() is None
