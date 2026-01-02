@@ -6,21 +6,31 @@ This module provides HTTP endpoints for remote agent management.
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import sys
 import tempfile
+import time
 import venv
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Security, UploadFile, status
+from fastapi.security import APIKeyHeader
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from ..utils.venv_utils import get_venv_pip_path
+from .metrics import get_metrics, get_metrics_content, is_prometheus_available
 from .server import AgentInstance, DeploymentServer
 
 logger = logging.getLogger(__name__)
+
+# Security: API Key authentication
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
 # API Models
@@ -51,18 +61,42 @@ class AgentStatusResponse(BaseModel):
 class DeploymentServerAPI:
     """FastAPI application for deployment server."""
 
-    def __init__(self, deployment_server: DeploymentServer, storage_path: Path):
+    def __init__(
+        self,
+        deployment_server: DeploymentServer,
+        storage_path: Path,
+        require_auth: bool = True,
+        api_key: Optional[str] = None,
+    ):
         """Initialize API.
 
         Args:
             deployment_server: The deployment server instance
             storage_path: Path to store agent packages and metadata
+            require_auth: Whether to require API key authentication
+            api_key: The API key to use (or from ATOLL_API_KEY env var)
         """
         self.server = deployment_server
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
-        # Checksum database
+        # Authentication configuration
+        self.require_auth = require_auth
+        self.api_key = api_key or os.getenv("ATOLL_API_KEY")
+
+        if self.require_auth and not self.api_key:
+            logger.warning(
+                "Authentication enabled but no API key configured. "
+                "Set ATOLL_API_KEY environment variable or disable auth."
+            )
+
+        # Metrics
+        self.metrics = get_metrics()
+
+        # Persistent storage - use deployment server's metadata store
+        # Checksum database is now part of metadata store
+
+        # Create FastAPI app
         self.checksum_db_path = storage_path / "checksums.json"
         self.checksums: dict[str, str] = self._load_checksums()
 
@@ -75,6 +109,42 @@ class DeploymentServerAPI:
 
         # Register routes
         self._register_routes()
+
+    def _verify_api_key(self, api_key: Optional[str] = Security(api_key_header)) -> bool:
+        """Verify API key for authentication.
+
+        Args:
+            api_key: API key from request header
+
+        Returns:
+            True if authentication is disabled or key is valid
+
+        Raises:
+            HTTPException: If authentication fails
+        """
+        # Authentication disabled
+        if not self.require_auth:
+            return True
+
+        # No API key in request
+        if not api_key:
+            self.metrics.record_auth_attempt("failure")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API key required. Provide X-API-Key header.",
+            )
+
+        # Invalid API key
+        if api_key != self.api_key:
+            logger.warning(f"Invalid API key attempt: {api_key[:10]}...")
+            self.metrics.record_auth_attempt("failure")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API key",
+            )
+
+        self.metrics.record_auth_attempt("success")
+        return True
 
     def _load_checksums(self) -> dict[str, str]:
         """Load checksum database from disk."""
@@ -167,10 +237,44 @@ class DeploymentServerAPI:
 
         @self.app.get("/health")
         async def health_check():
-            """Health check endpoint."""
-            return {"status": "healthy", "version": "2.0.0"}
+            """Health check endpoint (no authentication required)."""
+            self.metrics.health_checks_total.labels(status="success").inc()
+            return {
+                "status": "healthy",
+                "version": "2.0.0",
+                "auth_enabled": self.require_auth,
+                "metrics_enabled": is_prometheus_available(),
+            }
 
-        @self.app.get("/agents")
+        @self.app.get("/metrics")
+        async def metrics_endpoint():
+            """Prometheus metrics endpoint (no authentication required).
+
+            Returns metrics in Prometheus exposition format for scraping.
+            Install prometheus-client to enable: pip install atoll[monitoring]
+            """
+            # Update agent count metrics before serving
+            status_counts = {}
+            for agent in self.server.agents.values():
+                status = agent.status
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            self.metrics.update_agent_counts(status_counts)
+            self.metrics.set_allocated_ports(len(self.server.port_manager.allocated_ports))
+
+            # Count active processes
+            active_count = sum(
+                1
+                for agent in self.server.agents.values()
+                if agent.process and agent.process.poll() is None
+            )
+            self.metrics.set_active_processes(active_count)
+
+            # Return metrics in Prometheus format
+            content, content_type = get_metrics_content()
+            return Response(content=content, media_type=content_type)
+
+        @self.app.get("/agents", dependencies=[Depends(self._verify_api_key)])
         async def list_agents():
             """List all agents."""
             agents = []
@@ -187,7 +291,7 @@ class DeploymentServerAPI:
                 )
             return {"agents": agents, "count": len(agents)}
 
-        @self.app.post("/check")
+        @self.app.post("/check", dependencies=[Depends(self._verify_api_key)])
         async def check_agent(checksum: str):
             """Check if agent with checksum exists.
 
@@ -219,7 +323,7 @@ class DeploymentServerAPI:
                     "message": "Agent not found. Upload required.",
                 }
 
-        @self.app.post("/deploy")
+        @self.app.post("/deploy", dependencies=[Depends(self._verify_api_key)])
         async def deploy_agent(file: UploadFile = File(...), force: bool = False):
             """Deploy agent from ZIP package.
 
@@ -260,6 +364,8 @@ class DeploymentServerAPI:
                             print(f"  ✓ Agent '{name}' already installed with this checksum")
                             print("    Use force=true to reinstall")
                             logger.info(f"Agent {name} already installed with this checksum")
+                            self.metrics.record_deployment("cached")
+                            self.metrics.checksum_cache_hits.inc()
                             return {
                                 "status": "already_installed",
                                 "name": name,
@@ -349,6 +455,11 @@ class DeploymentServerAPI:
                 print(f"{'='*70}\n")
                 logger.info(f"Successfully deployed agent {agent_name}")
 
+                # Record metrics
+                duration = time.time() - start_time
+                self.metrics.record_deployment("success", duration)
+                self.metrics.checksum_cache_misses.inc()
+
                 return {
                     "status": "deployed",
                     "name": agent_name,
@@ -358,20 +469,23 @@ class DeploymentServerAPI:
                 }
 
             except HTTPException:
+                self.metrics.record_deployment("failure")
                 raise
             except Exception as e:
                 logger.error(f"Deployment failed: {e}")
+                self.metrics.record_deployment("failure")
                 raise HTTPException(status_code=500, detail=f"Deployment failed: {str(e)}")
             finally:
                 # Clean up temp file
                 tmp_path.unlink(missing_ok=True)
 
-        @self.app.post("/start")
+        @self.app.post("/start", dependencies=[Depends(self._verify_api_key)])
         async def start_agent(request: AgentActionRequest):
             """Start an agent."""
             success = await self.server.start_agent(request.agent_name)
             if success:
                 agent = self.server.agents[request.agent_name]
+                self.metrics.record_agent_start("success")
                 return {
                     "status": "started",
                     "name": request.agent_name,
@@ -381,13 +495,17 @@ class DeploymentServerAPI:
             else:
                 agent = self.server.agents.get(request.agent_name)
                 error_msg = agent.error_message if agent else "Agent not found"
+                self.metrics.record_agent_start("failure")
+                if agent:
+                    self.metrics.record_agent_failure(request.agent_name, error_msg or "unknown")
                 raise HTTPException(status_code=500, detail=f"Failed to start agent: {error_msg}")
 
-        @self.app.post("/stop")
+        @self.app.post("/stop", dependencies=[Depends(self._verify_api_key)])
         async def stop_agent(request: AgentActionRequest):
             """Stop an agent."""
             success = await self.server.stop_agent(request.agent_name)
             if success:
+                self.metrics.agent_stops_total.inc()
                 return {
                     "status": "stopped",
                     "name": request.agent_name,
@@ -395,12 +513,13 @@ class DeploymentServerAPI:
             else:
                 raise HTTPException(status_code=404, detail="Agent not found or not running")
 
-        @self.app.post("/restart")
+        @self.app.post("/restart", dependencies=[Depends(self._verify_api_key)])
         async def restart_agent(request: AgentActionRequest):
             """Restart an agent."""
             success = await self.server.restart_agent(request.agent_name)
             if success:
                 agent = self.server.agents[request.agent_name]
+                self.metrics.agent_restarts_total.inc()
                 return {
                     "status": "restarted",
                     "name": request.agent_name,
@@ -410,11 +529,61 @@ class DeploymentServerAPI:
             else:
                 raise HTTPException(status_code=500, detail="Failed to restart agent")
 
-        @self.app.get("/status/{agent_name}")
+        @self.app.get("/status/{agent_name}", dependencies=[Depends(self._verify_api_key)])
         async def get_agent_status(agent_name: str):
             """Get status of a specific agent."""
             if agent_name not in self.server.agents:
                 raise HTTPException(status_code=404, detail="Agent not found")
+
+            agent = self.server.agents[agent_name]
+            return {
+                "name": agent_name,
+                "status": agent.status,
+                "port": agent.port,
+                "pid": agent.pid,
+                "checksum": self.checksums.get(agent_name),
+                "start_time": agent.start_time.isoformat() if agent.start_time else None,
+                "restart_count": agent.restart_count,
+                "health_status": agent.health_status,
+                "error_message": agent.error_message,
+            }
+
+        @self.app.get("/agents/{agent_name}/diagnostics", dependencies=[Depends(self._verify_api_key)])
+        async def get_agent_diagnostics(agent_name: str):
+            """Get diagnostic information for an agent.
+
+            Returns detailed diagnostics including:
+            - Configuration validation
+            - Python version compatibility
+            - Port conflict detection
+            - Dependency issues
+            - Captured stdout/stderr logs
+
+            Args:
+                agent_name: Name of the agent
+
+            Returns:
+                Diagnostic report with analysis and recommendations
+            """
+            if agent_name not in self.server.agents:
+                raise HTTPException(status_code=404, detail="Agent not found")
+
+            agent = self.server.agents[agent_name]
+
+            # Generate diagnostics
+            diagnostics_text = self.server._generate_diagnostics(agent)
+
+            return {
+                "agent_name": agent_name,
+                "status": agent.status,
+                "diagnostics": diagnostics_text,
+                "error_message": agent.error_message,
+                "exit_code": agent.exit_code,
+                "stdout": agent.stdout_log,
+                "stderr": agent.stderr_log,
+                "config_path": str(agent.config_path),
+                "timestamp": datetime.now().isoformat(),
+            }
 
             agent = self.server.agents[agent_name]
             is_running = agent.process and agent.process.poll() is None
