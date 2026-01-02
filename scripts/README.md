@@ -136,12 +136,49 @@ Scripts work on macOS with Python 3.9+ installed. Tested on:
 
 ## Development Scripts
 
-For contributors, additional development scripts may be added here:
+For contributors, additional development scripts:
+
+#### `build_executable.py`
+Build standalone executables using PyInstaller for distribution.
+
+**Usage:**
+```bash
+# Build for current platform
+python scripts/build_executable.py
+
+# Build for specific platform
+python scripts/build_executable.py --platform windows
+python scripts/build_executable.py --platform linux
+python scripts/build_executable.py --platform macos
+
+# Build without cleaning first
+python scripts/build_executable.py --no-clean
+```
+
+**Features:**
+- Single-file executable with embedded Python runtime
+- Includes all dependencies
+- Cross-platform support (Windows .exe, Linux/macOS binary)
+- Automatic PyInstaller spec file generation
+- Size optimization with UPX compression
+
+**Requirements:**
+```bash
+pip install pyinstaller
+```
+
+**Output:**
+- Executable in `dist/` directory
+- Target size: <100 MB (compressed)
+- Platform: Windows (.exe), Linux, or macOS
+
+---
+
+### Future Development Scripts
 
 - Linting and formatting scripts
 - Database migration scripts
 - Testing utilities
-- Build scripts for standalone executables
 
 ---
 
