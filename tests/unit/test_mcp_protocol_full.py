@@ -35,12 +35,14 @@ class TestMCPResources:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_resources()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_resources()
 
-                assert len(result["resources"]) == 1
-                assert result["resources"][0]["uri"] == "file:///example.txt"
+            assert len(result["resources"]) == 1
+            assert result["resources"][0]["uri"] == "file:///example.txt"
 
     @pytest.mark.asyncio
     async def test_list_resources_with_pagination(self):
@@ -57,14 +59,16 @@ class TestMCPResources:
             "result": {"resources": [{"uri": "file:///test.txt"}], "nextCursor": "page2"}
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_resources(cursor="page1")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_resources(cursor="page1")
 
-                # Verify cursor was passed in request
-                request = mock_send.call_args[0][0]
-                assert request["params"]["cursor"] == "page1"
-                assert result["nextCursor"] == "page2"
+            # Verify cursor was passed in request
+            request = mock_send.call_args[0][0]
+            assert request["params"]["cursor"] == "page1"
+            assert result["nextCursor"] == "page2"
 
     @pytest.mark.asyncio
     async def test_list_resources_not_connected(self):
@@ -102,18 +106,20 @@ class TestMCPResources:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.read_resource("file:///example.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.read_resource("file:///example.txt")
 
-                # Verify request format
-                request = mock_send.call_args[0][0]
-                assert request["method"] == "resources/read"
-                assert request["params"]["uri"] == "file:///example.txt"
+            # Verify request format
+            request = mock_send.call_args[0][0]
+            assert request["method"] == "resources/read"
+            assert request["params"]["uri"] == "file:///example.txt"
 
-                # Verify response
-                assert len(result["contents"]) == 1
-                assert result["contents"][0]["text"] == "Hello, world!"
+            # Verify response
+            assert len(result["contents"]) == 1
+            assert result["contents"][0]["text"] == "Hello, world!"
 
     @pytest.mark.asyncio
     async def test_read_resource_not_connected(self):
@@ -141,10 +147,12 @@ class TestMCPResources:
 
         mock_response = {"error": {"code": -32002, "message": "Resource not found"}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                with pytest.raises(RuntimeError, match="Resource read error"):
-                    await client.read_resource("file:///nonexistent.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+            pytest.raises(RuntimeError, match="Resource read error"),
+        ):
+            await client.read_resource("file:///nonexistent.txt")
 
     @pytest.mark.asyncio
     async def test_subscribe_resource_success(self):
@@ -160,11 +168,13 @@ class TestMCPResources:
 
         mock_response = {"result": {}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.subscribe_resource("file:///example.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.subscribe_resource("file:///example.txt")
 
-                assert result is True
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_subscribe_resource_not_supported(self):
@@ -194,11 +204,13 @@ class TestMCPResources:
 
         mock_response = {"result": {}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.unsubscribe_resource("file:///example.txt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.unsubscribe_resource("file:///example.txt")
 
-                assert result is True
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_list_resource_templates(self):
@@ -223,12 +235,14 @@ class TestMCPResources:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_resource_templates()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_resource_templates()
 
-                assert len(result) == 1
-                assert result[0]["uriTemplate"] == "file:///{path}"
+            assert len(result) == 1
+            assert result[0]["uriTemplate"] == "file:///{path}"
 
 
 class TestMCPPrompts:
@@ -259,12 +273,14 @@ class TestMCPPrompts:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_prompts()
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_prompts()
 
-                assert len(result["prompts"]) == 1
-                assert result["prompts"][0]["name"] == "code_review"
+            assert len(result["prompts"]) == 1
+            assert result["prompts"][0]["name"] == "code_review"
 
     @pytest.mark.asyncio
     async def test_list_prompts_with_pagination(self):
@@ -279,13 +295,15 @@ class TestMCPPrompts:
 
         mock_response = {"result": {"prompts": [{"name": "test"}], "nextCursor": "page2"}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.list_prompts(cursor="page1")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.list_prompts(cursor="page1")
 
-                request = mock_send.call_args[0][0]
-                assert request["params"]["cursor"] == "page1"
-                assert result["nextCursor"] == "page2"
+            request = mock_send.call_args[0][0]
+            assert request["params"]["cursor"] == "page1"
+            assert result["nextCursor"] == "page2"
 
     @pytest.mark.asyncio
     async def test_get_prompt_success(self):
@@ -307,19 +325,21 @@ class TestMCPPrompts:
             }
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.get_prompt("code_review", {"code": "def test(): pass"})
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.get_prompt("code_review", {"code": "def test(): pass"})
 
-                # Verify request
-                request = mock_send.call_args[0][0]
-                assert request["method"] == "prompts/get"
-                assert request["params"]["name"] == "code_review"
-                assert request["params"]["arguments"]["code"] == "def test(): pass"
+            # Verify request
+            request = mock_send.call_args[0][0]
+            assert request["method"] == "prompts/get"
+            assert request["params"]["name"] == "code_review"
+            assert request["params"]["arguments"]["code"] == "def test(): pass"
 
-                # Verify response
-                assert len(result["messages"]) == 1
-                assert result["messages"][0]["role"] == "user"
+            # Verify response
+            assert len(result["messages"]) == 1
+            assert result["messages"][0]["role"] == "user"
 
     @pytest.mark.asyncio
     async def test_get_prompt_without_arguments(self):
@@ -336,12 +356,14 @@ class TestMCPPrompts:
             "result": {"messages": [{"role": "user", "content": {"type": "text", "text": "test"}}]}
         }
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                await client.get_prompt("simple_prompt")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            await client.get_prompt("simple_prompt")
 
-                request = mock_send.call_args[0][0]
-                assert "arguments" not in request["params"]
+            request = mock_send.call_args[0][0]
+            assert "arguments" not in request["params"]
 
     @pytest.mark.asyncio
     async def test_get_prompt_not_connected(self):
@@ -369,10 +391,12 @@ class TestMCPPrompts:
 
         mock_response = {"error": {"code": -32602, "message": "Invalid prompt name"}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                with pytest.raises(RuntimeError, match="Prompt get error"):
-                    await client.get_prompt("nonexistent")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+            pytest.raises(RuntimeError, match="Prompt get error"),
+        ):
+            await client.get_prompt("nonexistent")
 
 
 class TestMCPLogging:
@@ -391,16 +415,18 @@ class TestMCPLogging:
 
         mock_response = {"result": {}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.set_logging_level("debug")
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.set_logging_level("debug")
 
-                # Verify request
-                request = mock_send.call_args[0][0]
-                assert request["method"] == "logging/setLevel"
-                assert request["params"]["level"] == "debug"
+            # Verify request
+            request = mock_send.call_args[0][0]
+            assert request["method"] == "logging/setLevel"
+            assert request["params"]["level"] == "debug"
 
-                assert result is True
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_set_logging_level_all_levels(self):
@@ -418,10 +444,12 @@ class TestMCPLogging:
         for level in levels:
             mock_response = {"result": {}}
 
-            with patch.object(client, "_send_message", new_callable=AsyncMock):
-                with patch.object(client, "_receive_message", return_value=mock_response):
-                    result = await client.set_logging_level(level)
-                    assert result is True
+            with (
+                patch.object(client, "_send_message", new_callable=AsyncMock),
+                patch.object(client, "_receive_message", return_value=mock_response),
+            ):
+                result = await client.set_logging_level(level)
+                assert result is True
 
     @pytest.mark.asyncio
     async def test_set_logging_level_not_connected(self):
@@ -449,10 +477,12 @@ class TestMCPLogging:
 
         mock_response = {"error": {"code": -32603, "message": "Internal error"}}
 
-        with patch.object(client, "_send_message", new_callable=AsyncMock):
-            with patch.object(client, "_receive_message", return_value=mock_response):
-                result = await client.set_logging_level("info")
-                assert result is False
+        with (
+            patch.object(client, "_send_message", new_callable=AsyncMock),
+            patch.object(client, "_receive_message", return_value=mock_response),
+        ):
+            result = await client.set_logging_level("info")
+            assert result is False
 
 
 class TestMCPProtocolCompliance:
@@ -485,21 +515,23 @@ class TestMCPProtocolCompliance:
             }
         }
 
-        with patch.object(client, "_receive_message", return_value=init_response):
-            with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-                await client._initialize()
+        with (
+            patch.object(client, "_receive_message", return_value=init_response),
+            patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+        ):
+            await client._initialize()
 
-                # Verify initialize request format
-                request = mock_send.call_args[0][0]
-                assert request["method"] == "initialize"
-                assert "clientInfo" in request["params"]
-                assert request["params"]["clientInfo"]["name"] == "ATOLL"
-                assert request["params"]["clientInfo"]["version"] == "1.0.0"
+            # Verify initialize request format
+            request = mock_send.call_args[0][0]
+            assert request["method"] == "initialize"
+            assert "clientInfo" in request["params"]
+            assert request["params"]["clientInfo"]["name"] == "ATOLL"
+            assert request["params"]["clientInfo"]["version"] == "1.0.0"
 
-                # Verify capabilities were stored
-                assert "resources" in client.capabilities
-                assert "prompts" in client.capabilities
-                assert "tools" in client.capabilities
+            # Verify capabilities were stored
+            assert "resources" in client.capabilities
+            assert "prompts" in client.capabilities
+            assert "tools" in client.capabilities
 
     @pytest.mark.asyncio
     async def test_jsonrpc_message_format(self):
@@ -523,16 +555,18 @@ class TestMCPProtocolCompliance:
         ]
 
         for method_name, args in methods_to_test:
-            with patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send:
-                with patch.object(client, "_receive_message", return_value=mock_response):
-                    method = getattr(client, method_name)
-                    await method(*args)
+            with (
+                patch.object(client, "_send_message", new_callable=AsyncMock) as mock_send,
+                patch.object(client, "_receive_message", return_value=mock_response),
+            ):
+                method = getattr(client, method_name)
+                await method(*args)
 
-                    request = mock_send.call_args[0][0]
+                request = mock_send.call_args[0][0]
 
-                    # Verify JSON-RPC 2.0 format
-                    assert request["jsonrpc"] == "2.0"
-                    assert "id" in request
-                    assert isinstance(request["id"], int)
-                    assert "method" in request
-                    assert "params" in request
+                # Verify JSON-RPC 2.0 format
+                assert request["jsonrpc"] == "2.0"
+                assert "id" in request
+                assert isinstance(request["id"], int)
+                assert "method" in request
+                assert "params" in request
