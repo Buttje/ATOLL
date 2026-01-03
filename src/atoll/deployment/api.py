@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import subprocess
-import sys
 import tempfile
 import time
 import venv
@@ -18,8 +17,8 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, HTTPException, Security, UploadFile, status
-from fastapi.security import APIKeyHeader
 from fastapi.responses import Response
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
 from ..utils.venv_utils import get_venv_pip_path
@@ -337,6 +336,8 @@ class DeploymentServerAPI:
             if not file.filename or not file.filename.endswith(".zip"):
                 raise HTTPException(status_code=400, detail="File must be a ZIP archive")
 
+            start_time = time.time()  # Track deployment duration
+
             print(f"\n{'='*70}")
             print("DEPLOYING AGENT FROM ZIP PACKAGE")
             print(f"{'='*70}")
@@ -474,7 +475,7 @@ class DeploymentServerAPI:
             except Exception as e:
                 logger.error(f"Deployment failed: {e}")
                 self.metrics.record_deployment("failure")
-                raise HTTPException(status_code=500, detail=f"Deployment failed: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Deployment failed: {str(e)}") from e
             finally:
                 # Clean up temp file
                 tmp_path.unlink(missing_ok=True)

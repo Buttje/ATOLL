@@ -118,7 +118,7 @@ async def generate(request: GenerateRequest):
             context=request.context,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}") from e
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -155,7 +155,7 @@ async def chat(request: ChatRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}") from e
 
 
 @app.get("/api/tags", response_model=TagsResponse)
