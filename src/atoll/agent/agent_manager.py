@@ -30,7 +30,7 @@ class AgentContext:
         self.name = name
         self.mcp_manager = mcp_manager
         self.parent_context = parent_context
-        self.child_agents: dict[str, "AgentContext"] = {}
+        self.child_agents: dict[str, AgentContext] = {}
 
 
 class ATOLLAgentManager:

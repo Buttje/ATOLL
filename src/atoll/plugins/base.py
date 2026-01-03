@@ -56,7 +56,7 @@ class ATOLLAgent(ABC):
         self.mcp_manager = mcp_manager
         self.ui = ui
         self.llm: Optional[OllamaLLM] = None
-        self.reasoning_engine: Optional["ReasoningEngine"] = None
+        self.reasoning_engine: Optional[ReasoningEngine] = None
         self.tools: list[Any] = []
 
         # Conversation memory (isolated per agent)

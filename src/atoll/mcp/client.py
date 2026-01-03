@@ -151,10 +151,8 @@ class MCPClient:
                 if self.process.stdin and not self.process.stdin.is_closing():
                     self.process.stdin.close()
                     # Wait for stdin to close
-                    try:
+                    with suppress(asyncio.TimeoutError, AttributeError):
                         await asyncio.wait_for(self.process.stdin.wait_closed(), timeout=1.0)
-                    except (asyncio.TimeoutError, AttributeError):
-                        pass
 
                 if self.process.stdout and not self.process.stdout.at_eof():
                     self.process.stdout.feed_eof()

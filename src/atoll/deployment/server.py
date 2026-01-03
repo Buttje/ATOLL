@@ -5,6 +5,7 @@ with ATOLL and manages agent lifecycle on the local machine.
 """
 
 import asyncio
+import contextlib
 import json
 import subprocess
 import sys
@@ -192,18 +193,14 @@ class DeploymentServer:
         # Cancel API task
         if self.api_task:
             self.api_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.api_task
-            except asyncio.CancelledError:
-                pass
 
         # Cancel health check task
         if self.health_check_task:
             self.health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.health_check_task
-            except asyncio.CancelledError:
-                pass
 
         # Stop all running agents
         for agent_name, agent in self.agents.items():
@@ -478,7 +475,7 @@ class DeploymentServer:
         Returns:
             List of agent status dictionaries
         """
-        return [self.get_agent_status(name) for name in self.agents.keys()]
+        return [self.get_agent_status(name) for name in self.agents]
 
     async def _health_check_loop(self) -> None:
         """Background task to monitor agent health."""
@@ -630,9 +627,8 @@ class DeploymentServer:
             self.next_port = self.config.base_port
 
         # Check agents directory
-        if self.config.agents_directory:
-            if not self.config.agents_directory.exists():
-                logger.warning(f"Agents directory does not exist: {self.config.agents_directory}")
+        if self.config.agents_directory and not self.config.agents_directory.exists():
+            logger.warning(f"Agents directory does not exist: {self.config.agents_directory}")
 
         return True, "Local deployment server validated successfully", self.next_port
 

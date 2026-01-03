@@ -230,7 +230,7 @@ Action Input: test"""
         tools = [{"name": "search", "description": "Search"}]
 
         # Run one iteration then check observation
-        result = await engine.run("Test", tools, mock_llm)
+        await engine.run("Test", tools, mock_llm)
 
         # Find observation step
         obs_steps = [s for s in engine.steps if s.step_type == StepType.OBSERVATION]

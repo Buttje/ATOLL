@@ -20,8 +20,8 @@ class ReasoningEngine:
             llm: Optional LLM instance for capability matching
         """
         self.llm = llm
-        self._mcp_manager: Optional["MCPServerManager"] = None
-        self._agent_manager: Optional["ATOLLAgentManager"] = None
+        self._mcp_manager: Optional[MCPServerManager] = None
+        self._agent_manager: Optional[ATOLLAgentManager] = None
 
     def set_llm(self, llm: "OllamaLLM") -> None:
         """Set the LLM instance for reasoning.

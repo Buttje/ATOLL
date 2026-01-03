@@ -67,13 +67,12 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.post(
-                f"{self.base_url}/check",
-                params={"checksum": checksum},
-            ) as response:
-                response.raise_for_status()
-                return await response.json()
+        async with aiohttp.ClientSession(timeout=self.timeout) as session, session.post(
+            f"{self.base_url}/check",
+            params={"checksum": checksum},
+        ) as response:
+            response.raise_for_status()
+            return await response.json()
 
     async def deploy_agent(
         self,
@@ -126,13 +125,12 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.post(
-                f"{self.base_url}/start",
-                json={"agent_name": agent_name},
-            ) as response:
-                response.raise_for_status()
-                return await response.json()
+        async with aiohttp.ClientSession(timeout=self.timeout) as session, session.post(
+            f"{self.base_url}/start",
+            json={"agent_name": agent_name},
+        ) as response:
+            response.raise_for_status()
+            return await response.json()
 
     async def stop_agent(self, agent_name: str) -> dict[str, Any]:
         """Stop an agent.
@@ -146,13 +144,12 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.post(
-                f"{self.base_url}/stop",
-                json={"agent_name": agent_name},
-            ) as response:
-                response.raise_for_status()
-                return await response.json()
+        async with aiohttp.ClientSession(timeout=self.timeout) as session, session.post(
+            f"{self.base_url}/stop",
+            json={"agent_name": agent_name},
+        ) as response:
+            response.raise_for_status()
+            return await response.json()
 
     async def restart_agent(self, agent_name: str) -> dict[str, Any]:
         """Restart an agent.
@@ -166,13 +163,12 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.post(
-                f"{self.base_url}/restart",
-                json={"agent_name": agent_name},
-            ) as response:
-                response.raise_for_status()
-                return await response.json()
+        async with aiohttp.ClientSession(timeout=self.timeout) as session, session.post(
+            f"{self.base_url}/restart",
+            json={"agent_name": agent_name},
+        ) as response:
+            response.raise_for_status()
+            return await response.json()
 
     async def get_agent_status(self, agent_name: str) -> dict[str, Any]:
         """Get status of specific agent.

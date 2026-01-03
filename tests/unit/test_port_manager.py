@@ -1,8 +1,7 @@
 """Tests for port allocation and management."""
 
 import socket
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -187,7 +186,7 @@ class TestPortExhaustion:
         manager = PortManager(base_port=10200, max_ports=3)
 
         # Allocate and release
-        port1 = manager.allocate_port("agent1")
+        manager.allocate_port("agent1")
         manager.release_port("agent1")
 
         # Allocate again - might get same or different port
