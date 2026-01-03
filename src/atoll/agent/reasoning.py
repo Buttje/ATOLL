@@ -148,7 +148,7 @@ class ReasoningEngine:
         user_prompt: str,
         mcp_capabilities: dict[str, dict[str, Any]],
         agent_capabilities: dict[str, dict[str, Any]],
-        tools: list[Any],
+        _tools: list[Any],
     ) -> str:
         """Build prompt for LLM capability analysis.
 

@@ -405,7 +405,7 @@ Think step-by-step and explain your reasoning."""
         """
         return []
 
-    def can_handle(self, prompt: str, context: dict[str, Any]) -> float:
+    def can_handle(self, _prompt: str, _context: dict[str, Any]) -> float:
         """Determine if this agent can handle the given prompt.
 
         Args:

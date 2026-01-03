@@ -23,39 +23,39 @@ except ImportError:
     PROMETHEUS_AVAILABLE = False
     # Provide no-op implementations if prometheus not installed
     class Counter:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             pass
 
-        def inc(self, *args, **kwargs):
+        def inc(self, *_args, **_kwargs):
             pass
 
-        def labels(self, *args, **kwargs):
+        def labels(self, *_args, **_kwargs):
             return self
 
     class Gauge:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             pass
 
-        def set(self, *args, **kwargs):
+        def set(self, *_args, **_kwargs):
             pass
 
-        def inc(self, *args, **kwargs):
+        def inc(self, *_args, **_kwargs):
             pass
 
-        def dec(self, *args, **kwargs):
+        def dec(self, *_args, **_kwargs):
             pass
 
-        def labels(self, *args, **kwargs):
+        def labels(self, *_args, **_kwargs):
             return self
 
     class Histogram:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             pass
 
-        def observe(self, *args, **kwargs):
+        def observe(self, *_args, **_kwargs):
             pass
 
-        def labels(self, *args, **kwargs):
+        def labels(self, *_args, **_kwargs):
             return self
 
         def time(self):
@@ -75,7 +75,7 @@ except ImportError:
         def info(self, *args, **kwargs):
             pass
 
-    def generate_latest(*args, **kwargs):
+    def generate_latest(*_args, **_kwargs):
         return b"# Prometheus client not installed\n"
 
     CONTENT_TYPE_LATEST = "text/plain"

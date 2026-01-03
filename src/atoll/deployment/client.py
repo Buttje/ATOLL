@@ -35,10 +35,12 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.get(f"{self.base_url}/health") as response:
-                response.raise_for_status()
-                return await response.json()
+        async with (
+            aiohttp.ClientSession(timeout=self.timeout) as session,
+            session.get(f"{self.base_url}/health") as response,
+        ):
+            response.raise_for_status()
+            return await response.json()
 
     async def list_agents(self) -> list[dict[str, Any]]:
         """List all agents on server.
@@ -49,11 +51,13 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.get(f"{self.base_url}/agents") as response:
-                response.raise_for_status()
-                data = await response.json()
-                return data.get("agents", [])
+        async with (
+            aiohttp.ClientSession(timeout=self.timeout) as session,
+            session.get(f"{self.base_url}/agents") as response,
+        ):
+            response.raise_for_status()
+            data = await response.json()
+            return data.get("agents", [])
 
     async def check_agent(self, checksum: str) -> dict[str, Any]:
         """Check if agent with checksum exists.
@@ -182,10 +186,12 @@ class DeploymentClient:
         Raises:
             aiohttp.ClientError: If request fails
         """
-        async with aiohttp.ClientSession(timeout=self.timeout) as session:
-            async with session.get(f"{self.base_url}/status/{agent_name}") as response:
-                response.raise_for_status()
-                return await response.json()
+        async with (
+            aiohttp.ClientSession(timeout=self.timeout) as session,
+            session.get(f"{self.base_url}/status/{agent_name}") as response,
+        ):
+            response.raise_for_status()
+            return await response.json()
 
     # Synchronous wrappers for convenience
     def health_check_sync(self) -> dict[str, Any]:

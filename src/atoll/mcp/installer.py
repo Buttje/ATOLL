@@ -1001,7 +1001,7 @@ Do not include any explanation, just the command.
             return False
 
     async def _create_server_config(
-        self, name: str, transport: str, command: str, location: str
+        self, _name: str, transport: str, command: str, location: str
     ) -> MCPServerConfig:
         """Create server configuration object.
 
