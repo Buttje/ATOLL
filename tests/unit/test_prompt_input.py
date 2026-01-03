@@ -43,7 +43,7 @@ class TestAtollInput:
         """Test that history directory is created if it doesn't exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
             history_file = Path(tmpdir) / "subdir" / "history.txt"
-            handler = AtollInput(history_file=str(history_file))
+            AtollInput(history_file=str(history_file))
 
             assert history_file.parent.exists()
 
@@ -224,13 +224,13 @@ class TestAtollInputIntegration:
             history_file = Path(tmpdir) / "history.txt"
 
             # Create handler and simulate adding history
-            handler = AtollInput(history_file=str(history_file))
+            AtollInput(history_file=str(history_file))
 
             # Manually add entries to history file (simulating real usage)
             history_file.write_text("command1\ncommand2\ncommand3\n")
 
             # Create new handler and verify history is loaded
-            handler2 = AtollInput(history_file=str(history_file))
+            AtollInput(history_file=str(history_file))
 
             # History should be loaded from file
             assert history_file.exists()

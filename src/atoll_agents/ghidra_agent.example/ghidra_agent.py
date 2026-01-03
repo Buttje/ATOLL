@@ -20,7 +20,7 @@ class GhidraAgent(ATOLLAgent):
         """Initialize Ghidra agent."""
         super().__init__(name, version)
 
-    async def process(self, prompt: str, context: dict[str, Any]) -> dict[str, Any]:
+    async def process(self, prompt: str, _context: dict[str, Any]) -> dict[str, Any]:
         """Process a prompt with Ghidra-specific reasoning.
 
         Args:

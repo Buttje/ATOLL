@@ -16,37 +16,39 @@ class TestApplicationExtended:
     @pytest.mark.asyncio
     async def test_startup_with_mcp_servers(self):
         """Test startup with MCP servers configured."""
-        with patch("atoll.config.manager.ConfigManager") as mock_config_manager:
-            with patch("atoll.ui.terminal.TerminalUI"):
-                # Mock config manager
-                mock_config_instance = mock_config_manager.return_value
-                mock_config_instance.ollama_config = Mock(
-                    base_url="http://localhost", port=11434, model="test-model"
-                )
-                mock_config_instance.mcp_config = Mock(servers={})
-                mock_config_instance.load_configs = Mock()
+        with (
+            patch("atoll.config.manager.ConfigManager") as mock_config_manager,
+            patch("atoll.ui.terminal.TerminalUI"),
+        ):
+            # Mock config manager
+            mock_config_instance = mock_config_manager.return_value
+            mock_config_instance.ollama_config = Mock(
+                base_url="http://localhost", port=11434, model="test-model"
+            )
+            mock_config_instance.mcp_config = Mock(servers={})
+            mock_config_instance.load_configs = Mock()
 
-                # Mock MCP server manager
-                with patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class:
-                    mock_manager = mock_manager_class.return_value
-                    mock_manager.connect_all = AsyncMock()
-                    mock_manager.tool_registry = Mock(tools={})
+            # Mock MCP server manager
+            with patch("atoll.mcp.server_manager.MCPServerManager") as mock_manager_class:
+                mock_manager = mock_manager_class.return_value
+                mock_manager.connect_all = AsyncMock()
+                mock_manager.tool_registry = Mock(tools={})
 
-                    # Mock agent
-                    with patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class:
-                        mock_agent = mock_agent_class.return_value
-                        mock_agent.check_server_connection = AsyncMock(return_value=True)
-                        mock_agent.check_model_available = AsyncMock(return_value=True)
+                # Mock agent
+                with patch("atoll.agent.agent.OllamaMCPAgent") as mock_agent_class:
+                    mock_agent = mock_agent_class.return_value
+                    mock_agent.check_server_connection = AsyncMock(return_value=True)
+                    mock_agent.check_model_available = AsyncMock(return_value=True)
 
-                        with patch("builtins.print"):  # Mock print to avoid Unicode errors
-                            app = Application()
-                            await app.startup()
+                    with patch("builtins.print"):  # Mock print to avoid Unicode errors
+                        app = Application()
+                        await app.startup()
 
-                            # Verify startup completed successfully
-                            assert app.agent is not None
-                            assert app.mcp_manager is not None
-                            # Verify connect_all was called
-                            assert mock_manager.connect_all.called
+                        # Verify startup completed successfully
+                        assert app.agent is not None
+                        assert app.mcp_manager is not None
+                        # Verify connect_all was called
+                        assert mock_manager.connect_all.called
 
     @pytest.mark.asyncio
     async def test_handle_command_quit(self):

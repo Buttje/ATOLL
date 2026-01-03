@@ -489,8 +489,7 @@ class TestUnixPlatform:
 
         def mock_get_char():
             chars = list("hello") + ["\r"]
-            for char in chars:
-                yield char
+            yield from chars
 
         char_gen = mock_get_char()
 
@@ -507,8 +506,7 @@ class TestUnixPlatform:
 
         def mock_get_char():
             chars = ["h", "e", "l", "l", "o", "\x1b[D", "\x1b[D", "y", "\r"]
-            for char in chars:
-                yield char
+            yield from chars
 
         char_gen = mock_get_char()
 
@@ -525,8 +523,7 @@ class TestUnixPlatform:
 
         def mock_get_char():
             chars = ["a", "b", "c", "\x1b[D", "\x1b[D", "\x1b[3~", "\r"]
-            for char in chars:
-                yield char
+            yield from chars
 
         char_gen = mock_get_char()
 
@@ -553,8 +550,7 @@ class TestUnixPlatform:
                 "Y",  # Insert 'Y'
                 "\r",
             ]
-            for char in chars:
-                yield char
+            yield from chars
 
         char_gen = mock_get_char()
 

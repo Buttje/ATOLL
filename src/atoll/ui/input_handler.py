@@ -84,10 +84,9 @@ class InputHandler:
                     elif char == "\x1b[2~":  # Insert key (Einfg)
                         # Toggle insert/overtype mode
                         self.insert_mode = not self.insert_mode
-                    elif char == "\x1b[3~":  # Delete key (Entf)
-                        if cursor_pos < len(result):
-                            result.pop(cursor_pos)
-                            self._redraw_from_cursor(result, cursor_pos)
+                    elif char == "\x1b[3~" and cursor_pos < len(result):  # Delete key (Entf)
+                        result.pop(cursor_pos)
+                        self._redraw_from_cursor(result, cursor_pos)
                     # Ignore other escape sequences (Page Up/Down, etc.)
                     continue
                 elif char == "\x1b":  # Plain ESC key
@@ -165,26 +164,20 @@ class InputHandler:
                 if char in (b"\x00", b"\xe0"):
                     second = msvcrt.getch()
                     # Arrow keys: Up=72, Down=80, Left=75, Right=77
-                    if second == b"H":  # Up arrow
-                        return "\x1b[A"
-                    elif second == b"P":  # Down arrow
-                        return "\x1b[B"
-                    elif second == b"M":  # Right arrow
-                        return "\x1b[C"
-                    elif second == b"K":  # Left arrow
-                        return "\x1b[D"
-                    elif second == b"S":  # Delete key
-                        return "\x1b[3~"
-                    elif second == b"R":  # Insert key
-                        return "\x1b[2~"
-                    elif second == b"G":  # Home key
-                        return "\x1b[H"
-                    elif second == b"O":  # End key
-                        return "\x1b[F"
-                    elif second == b"I":  # Page Up
-                        return "\x1b[5~"
-                    elif second == b"Q":  # Page Down
-                        return "\x1b[6~"
+                    key_map = {
+                        b"H": "\x1b[A",  # Up arrow
+                        b"P": "\x1b[B",  # Down arrow
+                        b"M": "\x1b[C",  # Right arrow
+                        b"K": "\x1b[D",  # Left arrow
+                        b"S": "\x1b[3~",  # Delete key
+                        b"R": "\x1b[2~",  # Insert key
+                        b"G": "\x1b[H",  # Home key
+                        b"O": "\x1b[F",  # End key
+                        b"I": "\x1b[5~",  # Page Up
+                        b"Q": "\x1b[6~",  # Page Down
+                    }
+                    if second in key_map:
+                        return key_map[second]
                     # Ignore other special keys (F1-F12, etc.)
                     continue
                 return char.decode("utf-8", errors="ignore")

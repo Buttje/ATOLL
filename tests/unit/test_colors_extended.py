@@ -48,10 +48,12 @@ class TestColorSchemeExtended:
 
     def test_color_detection_without_no_color_env(self):
         """Test color detection without NO_COLOR environment variable."""
-        with patch.dict(os.environ, {}, clear=True):
-            with patch("sys.stdout.isatty", return_value=True):
-                scheme = ColorScheme()
-                assert scheme.enabled is True
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("sys.stdout.isatty", return_value=True),
+        ):
+            scheme = ColorScheme()
+            assert scheme.enabled is True
 
     def test_format_with_empty_string(self):
         """Test formatting empty string."""
@@ -69,18 +71,22 @@ class TestColorSchemeExtended:
     @patch("platform.system", return_value="Windows")
     def test_windows_color_support(self, mock_platform):
         """Test Windows color support detection."""
-        with patch("sys.stdout.isatty", return_value=True):
-            with patch.dict(os.environ, {}, clear=True):
-                scheme = ColorScheme()
-                assert scheme.enabled is True
+        with (
+            patch("sys.stdout.isatty", return_value=True),
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            scheme = ColorScheme()
+            assert scheme.enabled is True
 
     @patch("platform.system", return_value="Linux")
     def test_unix_color_support(self, mock_platform):
         """Test Unix color support detection."""
-        with patch("sys.stdout.isatty", return_value=True):
-            with patch.dict(os.environ, {}, clear=True):
-                scheme = ColorScheme()
-                assert scheme.enabled is True
+        with (
+            patch("sys.stdout.isatty", return_value=True),
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            scheme = ColorScheme()
+            assert scheme.enabled is True
 
     def test_disabled_colors_return_plain_text(self):
         """Test that disabled colors return plain text."""

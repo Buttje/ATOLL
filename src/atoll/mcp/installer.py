@@ -239,13 +239,13 @@ class MCPInstaller:
                 "Please install Podman Desktop from: https://podman.io/getting-started/installation"
             )
             self.ui.display_info("Or use winget: winget install RedHat.Podman-Desktop")
-            response = input("Press Enter after installation completes...")
+            input("Press Enter after installation completes...")
             return self._check_command_exists("podman")
         else:
             self.ui.display_info(
                 "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
             )
-            response = input("Press Enter after installation completes...")
+            input("Press Enter after installation completes...")
             return self._check_command_exists("docker")
 
     async def _install_container_runtime_linux(self, runtime: str) -> bool:
@@ -272,7 +272,7 @@ class MCPInstaller:
             self.ui.display_info(
                 "Please follow instructions at: https://docs.docker.com/engine/install/"
             )
-            response = input("Press Enter after installation completes...")
+            input("Press Enter after installation completes...")
             return self._check_command_exists("docker")
 
     async def _install_container_runtime_macos(self, runtime: str) -> bool:
@@ -291,13 +291,13 @@ class MCPInstaller:
                 self.ui.display_info(
                     "Please install Podman Desktop from: https://podman.io/getting-started/installation"
                 )
-                response = input("Press Enter after installation completes...")
+                input("Press Enter after installation completes...")
                 return self._check_command_exists("podman")
         else:
             self.ui.display_info(
                 "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
             )
-            response = input("Press Enter after installation completes...")
+            input("Press Enter after installation completes...")
             return self._check_command_exists("docker")
 
     async def install_server(
@@ -752,9 +752,8 @@ class MCPInstaller:
 
             if has_docker_option:
                 runtime = await self._detect_container_runtime()
-                if not runtime:
-                    if await self._install_container_runtime():
-                        runtime = await self._detect_container_runtime()
+                if not runtime and await self._install_container_runtime():
+                    runtime = await self._detect_container_runtime()
 
                 if runtime:
                     self.ui.display_info(f"Docker/Podman support detected, using {runtime}")
@@ -1002,7 +1001,7 @@ Do not include any explanation, just the command.
             return False
 
     async def _create_server_config(
-        self, name: str, transport: str, command: str, location: str
+        self, _name: str, transport: str, command: str, location: str
     ) -> MCPServerConfig:
         """Create server configuration object.
 
@@ -1024,9 +1023,7 @@ Do not include any explanation, just the command.
             config_dict["args"] = parts[1:] if len(parts) > 1 else []
             if location:
                 config_dict["cwd"] = location
-        elif transport == "http":
-            config_dict["url"] = location
-        elif transport == "sse":
+        elif transport == "http" or transport == "sse":
             config_dict["url"] = location
 
         return MCPServerConfig.from_dict(config_dict)

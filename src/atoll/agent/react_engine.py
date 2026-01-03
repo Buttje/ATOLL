@@ -191,7 +191,7 @@ class ReActEngine:
             "iterations": self.config.max_iterations,
         }
 
-    def _build_context(self, prompt: str, tools: list[dict]) -> str:
+    def _build_context(self, _prompt: str, tools: list[dict]) -> str:
         """Build context prompt with tool descriptions."""
         context = """You are an AI assistant that can reason and take actions to answer questions.
 
@@ -230,7 +230,7 @@ Remember:
     _ACTION_PATTERN = r"Action:\s*(.+?)(?=\n|$)"
     _ACTION_INPUT_PATTERN = r"Action Input:\s*(.+?)(?=\n|$)"
 
-    def _parse_response(self, response: str, step_number: int) -> Optional[dict]:
+    def _parse_response(self, response: str, _step_number: int) -> Optional[dict]:
         """Parse LLM response into structured format.
 
         Expected formats:
